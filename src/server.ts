@@ -2,6 +2,7 @@ import morgan from 'morgan';
 
 import helmet from 'helmet';
 import express, { Request, Response, NextFunction } from 'express';
+import cors from 'cors';
 
 
 import 'express-async-errors';
@@ -15,6 +16,10 @@ import { RouteError } from './common/routeerror.js';
 import { NodeEnvs } from './common/constants.js';
 
 
+import ProductRouter from './routes/product.router.js';
+import categoryRouter from './routes/catagory.router.js';
+import uploadRouter from './routes/upload.route.js';
+
 /******************************************************************************
                                 Setup
 ******************************************************************************/
@@ -23,7 +28,15 @@ const app = express();
 
 
 // **** Middleware **** //
+const corsOptions = {
+  origin: process.env.FRONTENDURL || 'http://localhost:3000',
+  credentials: true,     
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+};
+app.set("trust proxy", true);
 
+app.use(cors(corsOptions));
 // Basic middleware
 app.use(express.json());
 app.use(express.urlencoded({extended: true}));
@@ -37,6 +50,8 @@ if (ENV.NODE_ENV === NodeEnvs.Dev) {
 if (ENV.NODE_ENV === NodeEnvs.Production) {
   app.use(helmet());
 }
+
+console.log("NODE_ENV", process.env.api_key);
 
 // Add APIs, must be after middleware
 // app.use(Paths.Base, BaseRouter);
@@ -55,6 +70,9 @@ app.use((err: Error, _: Request, res: Response, next: NextFunction) => {
 });
 
 
+app.use("/api/products",ProductRouter)
+app.use("/api/category", categoryRouter);
+app.use("/api/upload", uploadRouter);
 // **** FrontEnd Content **** //
 
 // Set views directory (html)
