@@ -8,227 +8,197 @@ datasource db {
 }
 
 model Product {
-  id          String         @id @default(cuid())
-  name        String
-  description String
-  price       Float
-  discount    Float          @default(0)
-  category    Category       @relation(fields: [categoryId], references: [id])
-  categoryId  String
-  variants    Variant[]
-  assets      ProductAsset[]
-  reviews     Review[]
-  tags        ProductTag[]
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
-  status      ProductStatus  @default(DRAFT)
-  Wishlist    Wishlist[]
-  material    String?
-  Sales SalesSummary[]
+  id            String         @id @default(cuid())
+  name          String
+  description   String
+  price         Float
+  discountPrice Float?
+  material      String
+  category_id   String
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  status        ProductStatus  @default(DRAFT)
+  assets        ProductAsset[]
+  colors        ProductColor[]
 }
 
-enum ProductStatus {
-  DRAFT
-  PUBLISHED
-  ACTIVE
-  INACTIVE
+model ProductColor {
+  id        String           @id @default(cuid())
+  color     String
+  productId String
+  assets    ProductAsset[]
+  product   Product          @relation(fields: [productId], references: [id], onDelete: Cascade)
+  sizes     ProductVariant[]
+}
+
+model ProductVariant {
+  id        String         @id @default(cuid())
+  size      VariantsValues
+  stock     Int
+  colorId   String
+  OrderItem OrderItem[]
+  color     ProductColor   @relation(fields: [colorId], references: [id], onDelete: Cascade)
 }
 
 model ProductAsset {
-  id        String    @id @default(uuid())
+  id        String        @id @default(cuid())
   asset_url String
-  type      AssetType
-   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade) 
-  productId String
-}
-
-enum AssetType {
-  IMAGE
-  VIDEO
-  DOCUMENT
+  productId String?
+  type      AssetType     @default(IMAGE)
+  colorId   String?
+  color     ProductColor? @relation(fields: [colorId], references: [id], onDelete: Cascade)
+  product   Product?      @relation(fields: [productId], references: [id], onDelete: Cascade)
 }
 
 model Category {
-  id        String    @id @default(cuid())
-  name      String
-  description String?
-  parent    Category? @relation("CategoryToParent", fields: [parentId], references: [id])
-  parentId  String?
-  products  Product[]
-
-  createdAt DateTime  @default(now())
-
-  Category Category[] @relation("CategoryToParent")
-}
-
-model Variant {
-  id         String      @id @default(cuid())
-  size       Size
-  images     String[]
-  stock      Int
-  product    Product     @relation(fields: [productId], references: [id])
-  productId  String
-  cartItems  CartItem[]
-  orderItems OrderItem[]
-  createdAt  DateTime    @default(now())
-  updatedAt  DateTime    @updatedAt
-}
-
-enum Size {
-  S
-  M
-  L
-  XL
-  XXL 
+  id           String   @id @default(cuid())
+  name         String
+  description  String?
+  productCount Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
 
 model User {
-  id        String     @id @default(cuid())
-  name      String
-  email     String     @unique
-  phone     String     @unique
-  password  String
-  addresses Address[]
-  cart      CartItem[]
-  orders    Order[]
-  reviews   Review[]
-  wishlist  Wishlist[]
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  id                String    @id @default(cuid())
+  name              String?
+  mobile_no         String    @unique
+  isPhoneNoVerified Boolean   @default(false)
+  phoneNoVerified   DateTime?
+  image             String?
+  email             String?    @unique
+  isEmailVerified Boolean @default(false)
+  emailVerified     DateTime?
+  password          String?
+  role              UserType  @default(USER)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  accounts          Account[]
+  Order             Order[]
+  sessions          Session[]
+
+  Address Address[]
+   Otp Otp[]
+}
+
+model Otp {
+  id        String   @id @default(cuid())
+  otp       String   @unique
+  userphone String   @unique
+  user      User     @relation(fields: [userphone], references: [mobile_no], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  jwt     String?
 }
 
 model Address {
-  id        String   @id @default(cuid())
-  houseNo   String
+  id        String  @id @default(uuid())
   street    String
   city      String
   state     String
   country   String
   zipCode   String
-  user      User     @relation(fields: [userId], references: [id])
-  userId    String
+  userId    String  // Foreign key to User
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
 
-  Order Order[]
+
+model Account {
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([provider, providerAccountId])
 }
 
 model Order {
-  id          String      @id @default(cuid())
-  user        User        @relation(fields: [userId], references: [id])
+  id          String           @id @default(cuid())
   userId      String
+  total       Float
+  status      OrderStatus
+  fulfillment OrderFulfillment
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   items       OrderItem[]
-  totalAmount Float
-  status      OrderStatus @default(PENDING)
-  address     Address     @relation(fields: [addressId], references: [id])
-  addressId   String
-  payment     Payment?
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
 }
 
 model OrderItem {
-  id        String   @id @default(cuid())
-  order     Order    @relation(fields: [orderId], references: [id])
-  orderId   String
-  variant   Variant  @relation(fields: [variantId], references: [id])
-  variantId String
-  quantity  Int
-  price     Float
-  createdAt DateTime @default(now())
+  id               String         @id @default(cuid())
+  orderId          String
+  productVariantId String
+  quantity         Int
+  priceAtOrder     Float
+  order            Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productVariant   ProductVariant @relation(fields: [productVariantId], references: [id], onDelete: Cascade)
+}
+
+model Session {
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@id([identifier, token])
+}
+
+enum ProductStatus {
+  DRAFT
+  PUBLISHED
+}
+
+enum AssetType {
+  IMAGE
+  VIDEO
+}
+
+enum VariantsValues {
+  SIZE_5
+  SIZE_6
+  SIZE_7
+  SIZE_8
+  SIZE_9
+  SIZE_10
+  SIZE_11
+  SIZE_12
+}
+
+enum UserType {
+  ADMIN
+  USER
 }
 
 enum OrderStatus {
   PENDING
-  PROCESSING
+  COMPLETED
+  CANCELLED
+}
+
+enum OrderFulfillment {
+  PENDING
   SHIPPED
   DELIVERED
-  CANCELLED
   RETURNED
-}
-
-model Payment {
-  id            String        @id @default(cuid())
-  order         Order         @relation(fields: [orderId], references: [id])
-  orderId       String        @unique
-  amount        Float
-  paymentMethod String
-  transactionId String
-  status        PaymentStatus @default(PENDING)
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-}
-
-enum PaymentStatus {
-  PENDING
-  COMPLETED
-  FAILED
-  REFUNDED
-}
-
-model Review {
-  id        String   @id @default(cuid())
-  user      User     @relation(fields: [userId], references: [id])
-  userId    String
-  product   Product  @relation(fields: [productId], references: [id])
-  productId String
-  rating    Int
-  comment   String
-  images    String[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model CartItem {
-  id        String   @id @default(cuid())
-  user      User     @relation(fields: [userId], references: [id])
-  userId    String
-  variant   Variant  @relation(fields: [variantId], references: [id])
-  variantId String
-  quantity  Int      @default(1)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([userId, variantId])
-}
-
-model Wishlist {
-  id        String   @id @default(cuid())
-  user      User     @relation(fields: [userId], references: [id])
-  userId    String
-  product   Product  @relation(fields: [productId], references: [id])
-  productId String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([userId, productId])
-}
-
-model Tag {
-  id        String       @id @default(cuid())
-  name      String       @unique
-  products  ProductTag[]
-  createdAt DateTime     @default(now())
-}
-
-model ProductTag {
-  product   Product @relation(fields: [productId], references: [id])
-  productId String
-  tag       Tag     @relation(fields: [tagId], references: [id])
-  tagId     String
-
-  @@id([productId, tagId])
-}
-
-model SalesSummary {
-  id        String   @id @default(cuid())
-  date           DateTime @unique
-  totalRevenue   Float
-  salesGrowth    Float
-  totalOrders    Int
-  newCustomers   Int
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  productId      String
-  product        Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
 }
