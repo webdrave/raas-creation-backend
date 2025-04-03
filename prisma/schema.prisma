@@ -24,6 +24,7 @@ model Product {
   status      ProductStatus  @default(DRAFT)
   Wishlist    Wishlist[]
   material    String?
+  Sales SalesSummary[]
 }
 
 enum ProductStatus {
@@ -78,7 +79,7 @@ enum Size {
   M
   L
   XL
-  XXL
+  XXL 
 }
 
 model User {
@@ -217,4 +218,17 @@ model ProductTag {
   tagId     String
 
   @@id([productId, tagId])
+}
+
+model SalesSummary {
+  id        String   @id @default(cuid())
+  date           DateTime @unique
+  totalRevenue   Float
+  salesGrowth    Float
+  totalOrders    Int
+  newCustomers   Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  productId      String
+  product        Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
 }

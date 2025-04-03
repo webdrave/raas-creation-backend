@@ -19,7 +19,7 @@ import { NodeEnvs } from './common/constants.js';
 import ProductRouter from './routes/product.router.js';
 import categoryRouter from './routes/catagory.router.js';
 import uploadRouter from './routes/upload.route.js';
-
+import productPerformanceRouter from './routes/productperformance.routes.js';
 /******************************************************************************
                                 Setup
 ******************************************************************************/
@@ -73,6 +73,8 @@ app.use((err: Error, _: Request, res: Response, next: NextFunction) => {
 app.use("/api/products",ProductRouter)
 app.use("/api/category", categoryRouter);
 app.use("/api/upload", uploadRouter);
+app.use("/api/productperformance", productPerformanceRouter);
+
 // **** FrontEnd Content **** //
 
 // Set views directory (html)
