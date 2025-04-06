@@ -39,4 +39,24 @@ export const addProductSchema = z.object({
     variantId: z.string().cuid("Invalid variant ID"),
     stock: z.number().int().min(0, "Stock must be a non-negative integer"),
   });
+
+  export const addVariantSchema = z.object({
+    productId: z.string().cuid("Invalid product ID"),
+    sizes: z.array(
+      z.object({
+        size: z.nativeEnum(Size, {
+          errorMap: () => ({ message: "Invalid size value" }),
+        }),
+        stock: z.number().int().min(0, "Stock must be a non-negative integer"),
+      })
+    ),
+  });
+  
+  export const updateVariantSchema = z.object({
+    variantId: z.string().cuid("Invalid variant ID"),
+    size: z.nativeEnum(Size, {
+      errorMap: () => ({ message: "Invalid size value" }),  // Custom error message
+    }),
+    stock: z.number().int().min(0, "Stock must be a non-negative integer"),  // Validate that stock is non-negative
+  })
   

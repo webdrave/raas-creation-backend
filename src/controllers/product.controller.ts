@@ -2,7 +2,13 @@ import { PrismaClient, ProductStatus, AssetType, Size } from "@prisma/client";
 import { NextFunction, Request, Response } from "express";
 import { prisma } from "../utils/prismaClient";
 import { RouteError, ValidationErr } from "../common/routeerror";
-import { addProductSchema, addSizesSchema, updateStockSchema } from "../types/validation/product";
+import {
+  addProductSchema,
+  addSizesSchema,
+  updateStockSchema,
+  addVariantSchema,
+  updateVariantSchema,
+} from "../types/validation/product";
 import HttpStatusCodes from "../common/httpstatuscode";
 
 const addProduct = async (req: Request, res: Response, next: NextFunction) => {
@@ -13,11 +19,20 @@ const addProduct = async (req: Request, res: Response, next: NextFunction) => {
     throw new ValidationErr(parsed.error.errors);
   }
 
-  const { name, description, price, discount, categoryId, assets, status, material } = parsed.data;
+  const {
+    name,
+    description,
+    price,
+    discount,
+    categoryId,
+    assets,
+    status,
+    material,
+  } = parsed.data;
 
   try {
     // Ensure the status is valid (either DRAFT or PUBLISHED)
-    if (!['DRAFT', 'PUBLISHED'].includes(status)) {
+    if (!["DRAFT", "PUBLISHED"].includes(status)) {
       throw new ValidationErr([{ message: "Invalid status value" }]);
     }
 
@@ -27,15 +42,16 @@ const addProduct = async (req: Request, res: Response, next: NextFunction) => {
         name,
         description,
         price,
-        discount, 
+        discount,
         categoryId,
         material,
         status,
         assets: {
-          create: assets?.map((asset: { url: string; type: AssetType }) => ({
-            asset_url: asset.url,
-            type: asset.type,
-          })) || [], // Empty array if no assets
+          create:
+            assets?.map((asset: { url: string; type: AssetType }) => ({
+              asset_url: asset.url,
+              type: asset.type,
+            })) || [], // Empty array if no assets
         },
       },
       include: { assets: true }, // Include assets in the response
@@ -43,7 +59,7 @@ const addProduct = async (req: Request, res: Response, next: NextFunction) => {
 
     res.status(HttpStatusCodes.CREATED).json({ success: true, product });
   } catch (error) {
-    next(error); 
+    next(error);
   }
 };
 
@@ -54,30 +70,30 @@ const getAllProduct = async (
 ) => {
   const page = parseInt(req.query.page as string) || 1;
   const limit = parseInt(req.query.limit as string) || 10;
-  const search = (req.query.search as string) || '';
+  const search = (req.query.search as string) || "";
   const status = req.query.status as "PUBLISHED" | "DRAFT" | undefined;
-  
+
   const skip = (page - 1) * limit;
-  
+
   const totalCount = await prisma.product.count({
     where: {
       OR: [
-        { name: { contains: search, mode: 'insensitive' } },
-        { description: { contains: search, mode: 'insensitive' } }
+        { name: { contains: search, mode: "insensitive" } },
+        { description: { contains: search, mode: "insensitive" } },
       ],
-      ...(status && { status })
-    }
+      ...(status && { status }),
+    },
   });
-  
+
   const totalPages = Math.ceil(totalCount / limit);
-  
+
   const products = await prisma.product.findMany({
     where: {
       OR: [
-        { name: { contains: search, mode: 'insensitive' } },
-        { description: { contains: search, mode: 'insensitive' } }
+        { name: { contains: search, mode: "insensitive" } },
+        { description: { contains: search, mode: "insensitive" } },
       ],
-      ...(status && { status })
+      ...(status && { status }),
     },
     include: {
       assets: true,
@@ -85,16 +101,16 @@ const getAllProduct = async (
     skip,
     take: limit,
   });
-  
-  res.status(HttpStatusCodes.OK).json({ 
-    success: true, 
+
+  res.status(HttpStatusCodes.OK).json({
+    success: true,
     products,
     pagination: {
       totalPages,
       currentPage: page,
       totalItems: totalCount,
-      itemsPerPage: limit
-    }
+      itemsPerPage: limit,
+    },
   });
 };
 
@@ -111,7 +127,8 @@ const getProduct = async (req: Request, res: Response, next: NextFunction) => {
     where: { id },
     include: {
       assets: true,
-      category: true, // Include the category if needed
+      category: true,
+      variants: true,
     },
   });
 
@@ -121,65 +138,189 @@ const getProduct = async (req: Request, res: Response, next: NextFunction) => {
   res.status(HttpStatusCodes.OK).json({ success: true, product });
 };
 
-const addSizes = async (req: Request, res: Response, next: NextFunction) => {
-  // Validate request body with the schema
-  const parsed = addSizesSchema.safeParse(req.body);
-  
-  // If validation fails, throw a custom error
+const deleteProduct = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    console.log("Receiving request to delete product", req.params);
+    const { id } = req.params;
+
+    if (!id) {
+       res
+        .status(HttpStatusCodes.BAD_REQUEST)
+        .json({ success: false, message: "Missing product id" });
+    }
+
+    const product = await prisma.product.findUnique({ where: { id } });
+
+    if (!product) {
+       res
+        .status(HttpStatusCodes.NOT_FOUND)
+        .json({ success: false, message: "Product not found" });
+    }
+
+    await prisma.product.delete({ where: { id } });
+
+     res
+      .status(HttpStatusCodes.OK)
+      .json({ success: true, message: "Product deleted" });
+  } catch (error) {
+    console.error("Error deleting product:", error);
+    next(error); // Pass to global error handler
+  }
+};
+
+const updateProduct = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  const { id } = req.params;
+  const parsed = addProductSchema.safeParse(req.body);
   if (!parsed.success) {
     throw new ValidationErr(parsed.error.errors);
   }
+  const { name, description, price, discount, categoryId, assets, status } =
+    parsed.data;
+  if (!id) {
+    throw new RouteError(HttpStatusCodes.BAD_REQUEST, "Missing product id");
+  }
+  const product = await prisma.product.findUnique({ where: { id } });
+  if (!product) {
+    throw new RouteError(HttpStatusCodes.NOT_FOUND, "Product not found");
+  }
+  const updatedProduct = await prisma.product.update({
+    where: { id },
+    data: {
+      name,
+      description,
+      price,
+      discount,
+      categoryId,
+      status,
+      assets: {
+        deleteMany: {}, // Delete existing assets
+        create:
+          assets?.map((asset: { url: string; type: AssetType }) => ({
+            asset_url: asset.url,
+            type: asset.type,
+          })) || [], // Create new assets
+      },
+    },
+  });
+  res.status(HttpStatusCodes.OK).json({ success: true, updatedProduct });
+};
 
-  // Extract data from the validated request body
-  const { productId, sizes } = parsed.data;
-
+const productVariant = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
-    const variants = await prisma.variant.createMany({
-      data: sizes.map((sizeObj) => ({
-        size: sizeObj.size as Size, 
-        stock: sizeObj.stock as number, 
-        productId: productId, 
-      })),
+    const parsed = addVariantSchema.safeParse(req.body);
+    if (!parsed.success) {
+      throw new ValidationErr(parsed.error.errors);
+    }
+
+    const { productId, sizes } = parsed.data;
+
+    // Check if product exists
+    const product = await prisma.product.findUnique({
+      where: { id: productId },
     });
-    res.status(HttpStatusCodes.CREATED).json({ success: true, variants });
+
+    if (!product) {
+      throw new RouteError(HttpStatusCodes.NOT_FOUND, "Product not found");
+    }
+
+    // Create variant
+    const variant = await prisma.variant.create({
+      data: {
+        productId,
+        SizeStock: {
+          create: sizes.map(({ size, stock }) => ({
+            size,
+            stock,
+          })),
+        },
+      },
+      include: {
+        product: true,
+        SizeStock: true,
+      },
+    });
+
+    res.status(HttpStatusCodes.CREATED).json({
+      success: true,
+      variant,
+    });
   } catch (error) {
     next(error);
   }
 };
 
-const updateStock = async (req: Request, res: Response, next: NextFunction) => {
-  
-  const parsed = updateStockSchema.safeParse(req.body);
-  if (!parsed.success) {
-    throw new ValidationErr(parsed.error.errors);
+
+
+
+const updateProductVariant = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const parsed = updateVariantSchema.safeParse({
+      ...req.body,
+      variantId: req.params.variantId,
+    });
+
+    if (!parsed.success) {
+      throw new ValidationErr(parsed.error.errors);
+    }
+
+    const { variantId, size, stock } = parsed.data;
+
+    const variant = await prisma.variant.findUnique({
+      where: { id: variantId },
+    });
+
+    if (!variant) {
+      throw new RouteError(HttpStatusCodes.NOT_FOUND, "Variant not found");
+    }
+
+    const updatedSizeStock = await prisma.sizeStock.update({
+      where: {
+        id: size, // Assuming 'size' uniquely identifies the size stock. Replace with the correct identifier if needed.
+      },
+      data: {
+        stock: stock,
+        // size: newSize, // optional if you want to change size
+      },
+    });
+
+    const updatedVariant = await prisma.variant.findUnique({
+      where: { id: variantId },
+      include: { SizeStock: true },
+    });
+
+    res.status(HttpStatusCodes.OK).json({ success: true, updatedVariant });
+
+  } catch (err) {
+    next(err);
   }
-  const { variantId, stock } = parsed.data;
-
-  const updatedVariant = await prisma.variant.update({
-    where: { id: variantId },
-    data: { stock },
-  });
-
-  res.status(HttpStatusCodes.OK).json({ success: true, updatedVariant });
-}
-
-const deleteProduct = async (req: Request, res: Response, next: NextFunction) => {
-  console.log("resiving request to delete product", req.body);
-  const { id } = req.params;
-
-  console.log("product id", id);
-  if (!id) {
-    throw new RouteError(HttpStatusCodes.BAD_REQUEST, "Missing product id");
-  }
-
-  const product = await prisma.product.findUnique({ where: { id } });
-  if (!product) {
-    throw new RouteError(HttpStatusCodes.NOT_FOUND, "Product not found");
-  }
-
-  await prisma.product.delete({ where: { id } });
-  res.status(HttpStatusCodes.OK).json({ success: true, message: "Product deleted" });
 };
 
 
-export default { addProduct, getAllProduct, getProduct, addSizes, updateStock ,deleteProduct};
+
+
+export default {
+  addProduct,
+  getAllProduct,
+  getProduct,
+  // updateStock,
+  deleteProduct,
+  updateProduct,
+  productVariant,
+  updateProductVariant,
+};
