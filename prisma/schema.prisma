@@ -37,7 +37,7 @@ model ProductAsset {
   id        String    @id @default(uuid())
   asset_url String
   type      AssetType
-   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade) 
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade) 
   productId String
 }
 
@@ -62,24 +62,30 @@ model Category {
 
 model Variant {
   id         String      @id @default(cuid())
-  size       Size
   images     String[]
-  stock      Int
-  product    Product     @relation(fields: [productId], references: [id])
+   product    Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
   productId  String
   cartItems  CartItem[]
   orderItems OrderItem[]
   createdAt  DateTime    @default(now())
   updatedAt  DateTime    @updatedAt
+  SizeStock SizeStock[]
 }
 
-enum Size {
-  S
-  M
-  L
-  XL
-  XXL
+model SizeStock {
+  id        String   @id @default(cuid())
+  size      Size     // Enum
+  stock     Int
+  variant   Variant  @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  variantId String
 }
+enum Size {
+  SIZE_5_5_M
+  SIZE_6_M
+  SIZE_6_5_M
+  FREE_SIZE
+}
+
 
 model User {
   id        String     @id @default(cuid())
