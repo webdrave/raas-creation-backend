@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "target": "ES2020",
-    "module": "CommonJS",  // Change this line
+    "module": "ES2020",
     "moduleResolution": "Node",
     "esModuleInterop": true,
     "rootDir": "src",
