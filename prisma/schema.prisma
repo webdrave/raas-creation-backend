@@ -8,23 +8,25 @@ datasource db {
 }
 
 model Product {
-  id            String         @id @default(cuid())
-  name          String
-  description   String
-  price         Float
-  discountPrice Float?
-  category_id   String
-  category      Category     @relation(fields: [category_id], references: [id])
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  status        ProductStatus  @default(DRAFT)
-  colors        ProductColor[]
-  assets        ProductAsset[]
-  ProductRating  ProductRating[]
+  id                 String               @id @default(cuid())
+  name               String
+  sku                String
+  slug               String
+  description        String
+  price              Float
+  discountPrice      Float?
+  category_id        String
+  category           Category             @relation(fields: [category_id], references: [id])
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  status             ProductStatus        @default(DRAFT)
+  colors             ProductColor[]
+  assets             ProductAsset[]
+  ProductRating      ProductRating[]
   ProductPerformance ProductPerformance[]
-  sales         SalesSummary[]
-  OrderItem     OrderItem[]
-  Wishlist    Wishlist[]
+  sales              SalesSummary[]
+  OrderItem          OrderItem[]
+  Wishlist           Wishlist[]
 }
 
 model ProductColor {
@@ -79,39 +81,36 @@ enum AssetType {
 }
 
 enum VariantsValues {
-  SIZE_5 // UK/India Size 5 (US Men 6, US Women 5, EU 38)
-  SIZE_6 // UK/India Size 6 (US Men 7, US Women 6, EU 39)
-  SIZE_7 // UK/India Size 7 (US Men 8, US Women 7, EU 40)
-  SIZE_8 // UK/India Size 8 (US Men 9, US Women 8, EU 41)
-  SIZE_9 // UK/India Size 9 (US Men 10, US Women 9, EU 42)
-  SIZE_10 // UK/India Size 10 (US Men 11, US Women 10, EU 43)
-  SIZE_11 // UK/India Size 11 (US Men 12, US Women 11, EU 44)
-  SIZE_12 // UK/India Size 12 (US Men 13, US Women 12, EU 47)
+  SIZE_36
+  SIZE_38
+  SIZE_40
+  SIZE_42
+  SIZE_44
+  SIZE_46
 }
 
 model User {
-
   id                String    @id @default(cuid())
   name              String?
   mobile_no         String    @unique
   isPhoneNoVerified Boolean   @default(false)
   phoneNoVerified   DateTime?
   image             String?
-  email             String?    @unique
-  isEmailVerified Boolean @default(false)
+  email             String?   @unique
+  isEmailVerified   Boolean   @default(false)
   emailVerified     DateTime?
   accounts          Account[]
   sessions          Session[]
   password          String?
   role              UserType  @default(USER)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
-  Order       Order[]
+  Order         Order[]
   ProductRating ProductRating[]
-  Address Address[]
-  Wishlist    Wishlist[]
-  Otp Otp[]
+  Address       Address[]
+  Wishlist      Wishlist[]
+  Otp           Otp[]
 }
 
 model Address {
@@ -144,7 +143,7 @@ model Otp {
   user      User     @relation(fields: [userphone], references: [mobile_no], onDelete: Cascade)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  jwt     String?
+  jwt       String?
 }
 
 model Account {
@@ -169,23 +168,23 @@ model Account {
 }
 
 model Order {
-  id          String           @id @default(cuid())
-  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId      String
-  items       OrderItem[] // Join table for order items
-  total       Float
-  status      OrderStatus
+  id                String           @id @default(cuid())
+  user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId            String
+  items             OrderItem[] // Join table for order items
+  total             Float
+  status            OrderStatus
   ShipRocketOrderId Int?
-  awb         String?
-  DeliveryStatus String?       @default("PENDING")
-  etd         String?
-  deliveredAt  DateTime?
-  paid         Boolean         @default(false)
-  fulfillment OrderFulfillment
-  addressId   String
-  address     Address          @relation(fields: [addressId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  awb               String?
+  DeliveryStatus    String?          @default("PENDING")
+  etd               String?
+  deliveredAt       DateTime?
+  paid              Boolean          @default(false)
+  fulfillment       OrderFulfillment
+  addressId         String
+  address           Address          @relation(fields: [addressId], references: [id], onDelete: Cascade)
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
 }
 
 model OrderItem {
@@ -201,8 +200,9 @@ model OrderItem {
   productName      String
   size             String
   productId        String
-  product          Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
+  product          Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
 }
+
 enum OrderStatus {
   PENDING
   COMPLETED
@@ -234,7 +234,6 @@ model VerificationToken {
   @@id([identifier, token])
 }
 
-
 model ProductRating {
   id          String   @id @default(cuid())
   userId      String? // Foreign key for user (optional for guest users)
@@ -249,7 +248,6 @@ model ProductRating {
   // Relations
   user    User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-
 }
 
 model Testimonial {
@@ -264,43 +262,42 @@ model Testimonial {
 }
 
 model ContactForm {
-  id          String   @id @default(cuid())
-  name        String
-  email       String
-  phone       String
-  message     String
-  Status      String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  phone     String
+  message   String
+  Status    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model SalesSummary {
-  id             String   @id @default(uuid())
-  date           DateTime @unique
-  totalRevenue   Float
-  salesGrowth    Float
-  totalOrders    Int
-  newCustomers   Int
+  id           String   @id @default(uuid())
+  date         DateTime @unique
+  totalRevenue Float
+  salesGrowth  Float
+  totalOrders  Int
+  newCustomers Int
 
-  productId      String
-  product        Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 }
 
 model ProductPerformance {
-  id           String   @id @default(uuid())
-  productId    String
-  product      Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  date         DateTime @default(now())
-  revenue      Decimal  @default(0.0) 
-  orders       Int      @default(0)
-  rating       Float?  
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id        String   @id @default(uuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  date      DateTime @default(now())
+  revenue   Decimal  @default(0.0)
+  orders    Int      @default(0)
+  rating    Float?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([productId, date]) // Ensures one record per product per day
   @@index([date]) // Adds an index on the 'date' field
 }
-
 
 model Wishlist {
   id        String   @id @default(cuid())
