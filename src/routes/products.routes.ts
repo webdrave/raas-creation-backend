@@ -44,5 +44,8 @@ router.get("/:id", productController.getProduct);
 // Get all products
 router.get("/", productController.getAllProduct);
 
+//Get a product by slug
+router.get("/slug/:slug", productController.getSlugProduct)
+
 
 export default router;

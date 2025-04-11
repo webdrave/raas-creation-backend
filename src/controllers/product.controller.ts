@@ -242,6 +242,33 @@ const getProduct = async (req: Request, res: Response, next: NextFunction) => {
   }
   res.status(HttpStatusCodes.OK).json({ success: true, product });
 };
+const getSlugProduct = async (req: Request, res: Response, next: NextFunction) => {
+  // if(!req.user && req?.user?.role !== "ADMIN"){
+  //   throw new RouteError(HttpStatusCodes.UNAUTHORIZED, "Unauthorized");
+  // }
+  const { slug } = req.params;
+  if (!slug) {
+    throw new RouteError(HttpStatusCodes.BAD_REQUEST, "Missing product id");
+  }
+
+  const product = await prisma.product.findFirst({
+    where: { slug },
+    include: {
+      assets: true,
+      colors: {
+        include: {
+          assets: true,
+          sizes: true,
+        },
+      },
+    },
+  });
+
+  if (!product) {
+    throw new RouteError(HttpStatusCodes.NOT_FOUND, "Product not found");
+  }
+  res.status(HttpStatusCodes.OK).json({ success: true, product });
+};
 
 /** ✅ Get all products */
 const getAllProduct = async (
@@ -484,5 +511,6 @@ export default {
   deleteProduct,
   deleteColor,
   deleteVariant,
-  getOverview
+  getOverview,
+  getSlugProduct
 };
