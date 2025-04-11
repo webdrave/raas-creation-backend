@@ -13,7 +13,6 @@ model Product {
   description   String
   price         Float
   discountPrice Float?
-  material    String?
   category_id   String
   category      Category     @relation(fields: [category_id], references: [id])
   createdAt     DateTime       @default(now())

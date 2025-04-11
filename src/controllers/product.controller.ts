@@ -24,7 +24,7 @@ const addProduct = async (req: Request, res: Response, next: NextFunction) => {
   if (!parsed.success) {
     throw new ValidationErr(parsed.error.errors);
   }
-  const { name, description, price,discountPrice, category_id, assets, material, status } =
+  const { name, description, price,discountPrice, category_id, assets, status } =
     parsed.data;
 
   const product = await prisma.product.create({
@@ -34,7 +34,6 @@ const addProduct = async (req: Request, res: Response, next: NextFunction) => {
       price,
       discountPrice: discountPrice || null,
       category_id,
-      material,
       status,
       assets: {
         create:
@@ -292,7 +291,7 @@ const updateProduct = async (
     throw new RouteError(HttpStatusCodes.NOT_FOUND, "Product not found");
   }
 
-  const { name, description, price, discountPrice, category_id, material, assets, status } = parsed.data;
+  const { name, description, price, discountPrice, category_id,  assets, status } = parsed.data;
 
   // First, delete existing assets if new ones are provided
   if (assets && assets.length > 0) {
@@ -313,7 +312,6 @@ const updateProduct = async (
       price,
       discountPrice,
       category_id,
-      material,
       status,
       assets: assets ? {
         create: assets.map((asset: { url: string; type: AssetType }) => ({
