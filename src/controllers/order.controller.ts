@@ -45,6 +45,11 @@ const createOrder = async (req: Request, res: Response, next: NextFunction) => {
       include: { items: true },
     });
 
+    await prisma.productVariant.updateMany({
+      where: { id: { in: items.map((item) => item.productVariantId) } },
+      data: { stock: { decrement: 1 } },
+    });
+
     // Get all items details
 
     await orderProcessed(

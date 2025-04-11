@@ -99,8 +99,6 @@ app.use("/api/productperformance", productPerformanceRouter);
 
 app.use("/api/shiprocket", authenticateJWT, shipRocketRoutes);
 
-
-
 // Add error handler
 
 // app.use(authenticateJWT)

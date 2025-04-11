@@ -12,10 +12,33 @@ import {
 
 import { prisma } from "../utils/prismaclient.js";
 
+const cleanSlug = (text: string): string => {
+  return text
+    .toString()
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '-')          // Replace spaces with -
+    .replace(/[^\w\-]+/g, '')      // Remove non-word characters
+    .replace(/\-\-+/g, '-')        // Replace multiple - with single -
+    .replace(/^-+|-+$/g, '');      // Trim - from start/end
+};
+
+const slugify = async (text: string): Promise<string> => {
+  let baseSlug = cleanSlug(text);
+  let uniqueSlug = baseSlug;
+  let count = 0;
+
+  while (await prisma.product.findFirst({ where: { slug: uniqueSlug } })) {
+    const randomSuffix = `${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 5)}`;
+    uniqueSlug = `${baseSlug}-${randomSuffix}`;
+    count++;
+    if (count > 5) break; // fail-safe to prevent infinite loop
+  }
+
+  return uniqueSlug;
+};
 
 /** ✅ Add a new product */
-
-
 const addProduct = async (req: Request, res: Response, next: NextFunction) => {
   // if(!req.user && req?.user?.role !== "ADMIN"){
   //   throw new RouteError(HttpStatusCodes.UNAUTHORIZED, "Unauthorized");
@@ -24,8 +47,10 @@ const addProduct = async (req: Request, res: Response, next: NextFunction) => {
   if (!parsed.success) {
     throw new ValidationErr(parsed.error.errors);
   }
-  const { name, description, price,discountPrice, category_id, assets, material, status } =
+  const { name, description, price,discountPrice, category_id, assets, status, sku } =
     parsed.data;
+
+  const slug = await slugify(name);
 
   const product = await prisma.product.create({
     data: {
@@ -34,8 +59,9 @@ const addProduct = async (req: Request, res: Response, next: NextFunction) => {
       price,
       discountPrice: discountPrice || null,
       category_id,
-      material,
       status,
+      sku,
+      slug,
       assets: {
         create:
           assets?.map((asset: { url: string; type: AssetType }) => ({
@@ -216,6 +242,33 @@ const getProduct = async (req: Request, res: Response, next: NextFunction) => {
   }
   res.status(HttpStatusCodes.OK).json({ success: true, product });
 };
+const getSlugProduct = async (req: Request, res: Response, next: NextFunction) => {
+  // if(!req.user && req?.user?.role !== "ADMIN"){
+  //   throw new RouteError(HttpStatusCodes.UNAUTHORIZED, "Unauthorized");
+  // }
+  const { slug } = req.params;
+  if (!slug) {
+    throw new RouteError(HttpStatusCodes.BAD_REQUEST, "Missing product id");
+  }
+
+  const product = await prisma.product.findFirst({
+    where: { slug },
+    include: {
+      assets: true,
+      colors: {
+        include: {
+          assets: true,
+          sizes: true,
+        },
+      },
+    },
+  });
+
+  if (!product) {
+    throw new RouteError(HttpStatusCodes.NOT_FOUND, "Product not found");
+  }
+  res.status(HttpStatusCodes.OK).json({ success: true, product });
+};
 
 /** ✅ Get all products */
 const getAllProduct = async (
@@ -292,7 +345,7 @@ const updateProduct = async (
     throw new RouteError(HttpStatusCodes.NOT_FOUND, "Product not found");
   }
 
-  const { name, description, price, discountPrice, category_id, material, assets, status } = parsed.data;
+  const { name, description, price, discountPrice, category_id,  assets, status } = parsed.data;
 
   // First, delete existing assets if new ones are provided
   if (assets && assets.length > 0) {
@@ -313,7 +366,6 @@ const updateProduct = async (
       price,
       discountPrice,
       category_id,
-      material,
       status,
       assets: assets ? {
         create: assets.map((asset: { url: string; type: AssetType }) => ({
@@ -459,5 +511,6 @@ export default {
   deleteProduct,
   deleteColor,
   deleteVariant,
-  getOverview
+  getOverview,
+  getSlugProduct
 };
