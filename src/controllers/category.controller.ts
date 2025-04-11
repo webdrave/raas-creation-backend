@@ -75,15 +75,30 @@ const deleteCategory = async (req: Request, res: Response, next: NextFunction) =
 };
 
 /** ✅ Get all categories */
+/** ✅ Get all categories */
 const getAllCategories = async (
     req: Request,
     res: Response,
     next: NextFunction
 ) => {
-    const categories = await prisma.category.findMany();
-    res.status(HttpStatusCodes.OK).json({ success: true, categories });
+    const categories = await prisma.category.findMany({
+        include: {
+            _count: {
+                select: { Product: true },
+            },
+        },
+    });
+
+    // Optionally format the result to include productCount field explicitly
+    const formatted = categories.map((cat) => ({
+        ...cat,
+        productCount: cat._count.Product,
+    }));
+
+    res.status(HttpStatusCodes.OK).json({ success: true, categories: formatted });
 };
 
+/** ✅ Get a category by ID */
 /** ✅ Get a category by ID */
 const getCategory = async (req: Request, res: Response, next: NextFunction) => {
     const { id } = req.params;
@@ -91,14 +106,26 @@ const getCategory = async (req: Request, res: Response, next: NextFunction) => {
         throw new RouteError(HttpStatusCodes.BAD_REQUEST, "Missing category id");
     }
 
-    const category = await prisma.category.findUnique({ where: { id } });
+    const category = await prisma.category.findUnique({
+        where: { id },
+        include: {
+            _count: {
+                select: { Product: true },
+            },
+        },
+    });
+
     if (!category) {
         throw new RouteError(HttpStatusCodes.NOT_FOUND, "Category not found");
     }
 
-    res.status(HttpStatusCodes.OK).json({ success: true, category });
-};
+    const formatted = {
+        ...category,
+        productCount: category._count.Product,
+    };
 
+    res.status(HttpStatusCodes.OK).json({ success: true, category: formatted });
+};
 export default {
     addCategory,
     updateCategory,
