@@ -2,23 +2,20 @@ import morgan from 'morgan';
 
 import helmet from 'helmet';
 import express, { Request, Response, NextFunction } from 'express';
-import cors from 'cors';
 
 
 import 'express-async-errors';
 
 // import BaseRouter from '@src/routes';
-
+import { authenticateJWT, globalErrorHandler } from './middleware/globalerrorhandler.js';
 
 import ENV from './common/env.js';
 import HttpStatusCodes from './common/httpstatuscode.js';
 import { RouteError } from './common/routeerror.js';
 import { NodeEnvs } from './common/constants.js';
+import cors from 'cors';
+import cookieParser from 'cookie-parser'
 
-
-import ProductRouter from './routes/product.router.js';
-import categoryRouter from './routes/catagory.router.js';
-import uploadRouter from './routes/upload.route.js';
 
 /******************************************************************************
                                 Setup
@@ -26,10 +23,29 @@ import uploadRouter from './routes/upload.route.js';
 
 const app = express();
 
-
 // **** Middleware **** //
+
+// Basic middleware
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
+
+// Show routes called in console during development
+if (ENV.NODE_ENV === NodeEnvs.Dev) {
+  app.use(morgan('dev'));
+}
+
+// WebHook
+import webhookRoutes from './routes/webhook.routes.js'
+
+app.use("/api/webhook", webhookRoutes);
+
+
+
+//CORS
+const whitelist = [ENV.FRONTENDURL];
 const corsOptions = {
-  origin: process.env.FRONTENDURL || 'http://localhost:3000',
+  origin: ENV.FRONTENDURL,// Only allow your frontend URL
   credentials: true,     
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
@@ -37,42 +53,60 @@ const corsOptions = {
 app.set("trust proxy", true);
 
 app.use(cors(corsOptions));
-// Basic middleware
-app.use(express.json());
-app.use(express.urlencoded({extended: true}));
-
-// Show routes called in console during development
-if (ENV.NODE_ENV === NodeEnvs.Dev) {
-  app.use(morgan('dev'));
-}
-
-// Security
-if (ENV.NODE_ENV === NodeEnvs.Production) {
-  app.use(helmet());
-}
-
-console.log("NODE_ENV", process.env.api_key);
-
 // Add APIs, must be after middleware
+
+import UserRouter from './routes/products.routes.js'
+import uploadRouter from './routes/upload.routes.js'
+import categoryRouter from './routes/category.routes.js'
+import customersRoutes from './routes/customers.routes.js'
+import orderRoutes from './routes/order.routes.js'
+import testimonialsRoutes from './routes/testimonials.routes.js'
+import productratingRoutes from './routes/productsrating.routes.js'
+import resendEmailRoutes from './routes/resendemail.js'
+import inventoryRouter from './routes/inventory.routes.js'
+import analyticsRoutes from './routes/analytics.routes.js'
+import getAllTimeMetricsRoutes from './routes/salesmetrics.routes.js'
+import productPerformanceRouter from './routes/productperformance.routes.js'
+import shipRocketRoutes from './routes/shipRocket.routes.js'
+import { prisma } from './utils/prismaclient.js';
+
+app.use(globalErrorHandler);
+app.use("/api/products", UserRouter);
 // app.use(Paths.Base, BaseRouter);
 
-// Add error handler
-app.use((err: Error, _: Request, res: Response, next: NextFunction) => {
-  if (ENV.NODE_ENV !== NodeEnvs.Test.valueOf()) {
-    console.log(err, true);
-  }
-  let status = HttpStatusCodes.INTERNAL_SERVER_ERROR;
-  if (err instanceof RouteError) {
-    status = err.status;
-    res.status(status).json({ error: err.message });
-  }
-  return next(err);
-});
-
-
-app.use("/api/products",ProductRouter)
-app.use("/api/category", categoryRouter);
 app.use("/api/upload", uploadRouter);
+
+app.use("/api/category", categoryRouter);
+
+app.use("/api/customers", customersRoutes);
+
+app.use("/api/orders", orderRoutes);
+
+app.use("/api/reviews", productratingRoutes);
+
+app.use("/api/testimonials", testimonialsRoutes);
+
+
+app.use("/api/send", resendEmailRoutes);
+
+app.use("/api/inventory", inventoryRouter);
+
+app.use("/api/analytics", analyticsRoutes);
+
+app.use("/api/sales", getAllTimeMetricsRoutes);
+
+app.use("/api/productperformance", productPerformanceRouter);
+
+app.use("/api/shiprocket", authenticateJWT, shipRocketRoutes);
+
+
+
+// Add error handler
+
+// app.use(authenticateJWT)
+
+
+
 // **** FrontEnd Content **** //
 
 // Set views directory (html)
@@ -85,3 +119,5 @@ app.use("/api/upload", uploadRouter);
 ******************************************************************************/
 
 export default app;
+
+

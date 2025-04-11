@@ -8,5 +8,4 @@ const SERVER_START_MSG = `Express server started on port: ${ENV.PORT}`;
 
 app.listen(ENV.PORT, () => {
   console.log(SERVER_START_MSG);
-
 });
