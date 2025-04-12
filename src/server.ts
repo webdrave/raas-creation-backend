@@ -68,8 +68,7 @@ import analyticsRoutes from './routes/analytics.routes.js'
 import getAllTimeMetricsRoutes from './routes/salesmetrics.routes.js'
 import productPerformanceRouter from './routes/productperformance.routes.js'
 import shipRocketRoutes from './routes/shipRocket.routes.js'
-import { prisma } from './utils/prismaclient.js';
-
+import discountRouter from './routes/discount.routes.js'
 app.use(globalErrorHandler);
 app.use("/api/products", UserRouter);
 // app.use(Paths.Base, BaseRouter);
@@ -98,6 +97,8 @@ app.use("/api/sales", getAllTimeMetricsRoutes);
 app.use("/api/productperformance", productPerformanceRouter);
 
 app.use("/api/shiprocket", authenticateJWT, shipRocketRoutes);
+
+app.use("/api/discounts", authenticateJWT, discountRouter);
 
 // Add error handler
 

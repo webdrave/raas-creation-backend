@@ -326,3 +326,30 @@ model Upoads {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+
+model Discount {
+  id            Int       @id @default(autoincrement())
+  code          String    @unique
+  type          DiscountType
+  value         Float
+  minPurchase   Float?    // Optional
+  usageLimit    Int?      // Optional (null means unlimited)
+  usageCount    Int       @default(0)
+  startDate     DateTime
+  endDate       DateTime? // Optional (null means no expiration)
+  status        Status    @default(ACTIVE)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED_AMOUNT
+}
+
+enum Status {
+  ACTIVE
+  INACTIVE
+  EXPIRED
+}
