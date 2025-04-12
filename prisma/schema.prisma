@@ -273,7 +273,7 @@ model ContactForm {
 }
 
 model SalesSummary {
-  id           String   @id @default(uuid())
+  id           String   @id @default(cuid())
   date         DateTime @unique
   totalRevenue Float
   salesGrowth  Float
@@ -285,7 +285,7 @@ model SalesSummary {
 }
 
 model ProductPerformance {
-  id        String   @id @default(uuid())
+  id        String   @id @default(cuid())
   productId String
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   date      DateTime @default(now())
@@ -309,4 +309,12 @@ model Wishlist {
   updatedAt DateTime @updatedAt
 
   @@unique([userId, productId])
+}
+
+
+model Upoads {
+  id        String   @id @default(cuid())
+  url       String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
