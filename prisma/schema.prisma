@@ -27,6 +27,14 @@ model Product {
   sales              SalesSummary[]
   OrderItem          OrderItem[]
   Wishlist           Wishlist[]
+  tags               ProductTags[]
+}
+
+model ProductTags {
+  id        String  @id @default(cuid())
+  tag       String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId String
 }
 
 model ProductColor {
