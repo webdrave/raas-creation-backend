@@ -48,20 +48,26 @@ router.post("/", upload.single('file'), async (req, res, next) => {
 
     res.status(HttpStatusCodes.OK).json({ url: uploadResult.secure_url });
 });
-
 router.post("/multiple", upload.array('files', 10), async (req, res, next) => {
     if (!req.files || req.files.length === 0) {
         throw new RouteError(HttpStatusCodes.NOT_FOUND, "No files were uploaded");
     }
 
     const uploadPromises = (req.files as Express.Multer.File[]).map(file => {
+        const isImage = file.mimetype.startsWith("image/");
+
         return new Promise<cloudinary.UploadApiResponse>((resolve, reject) => {
             const uploadStream = cloudinary.v2.uploader.upload_stream(
                 {
                     resource_type: "auto",
                     folder: "uploads",
                     timeout: 600000,
-                    chunk_size: 6000000 // 6MB chunks for better upload handling
+                    chunk_size: 6000000,
+                    // Only apply WebP and best quality if it's an image
+                    ...(isImage && {
+                        format: "webp",
+                        quality: "auto:best",
+                    }),
                 },
                 (error, result) => {
                     if (error) {
@@ -83,8 +89,10 @@ router.post("/multiple", upload.array('files', 10), async (req, res, next) => {
     await prisma.upoads.createMany({
         data: urls.map(url => ({ url })),
     });
+
     res.status(HttpStatusCodes.OK).json({ urls });
 });
+
 
 router.get("/previous", async (req, res) => {
     const { cursor, limit = 20 } = req.query
