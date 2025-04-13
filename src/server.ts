@@ -46,7 +46,7 @@ app.use("/api/webhook", webhookRoutes);
 const whitelist = [ENV.FRONTENDURL];
 const corsOptions = {
   origin: ENV.FRONTENDURL,// Only allow your frontend URL
-  credentials: true,     
+  credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 };
@@ -69,6 +69,7 @@ import getAllTimeMetricsRoutes from './routes/salesmetrics.routes.js'
 import productPerformanceRouter from './routes/productperformance.routes.js'
 import shipRocketRoutes from './routes/shipRocket.routes.js'
 import discountRouter from './routes/discount.routes.js'
+import { prisma } from './utils/prismaclient.js';
 app.use(globalErrorHandler);
 app.use("/api/products", UserRouter);
 // app.use(Paths.Base, BaseRouter);
@@ -116,6 +117,290 @@ app.use("/api/discounts", authenticateJWT, discountRouter);
 /******************************************************************************
                                 Export default
 ******************************************************************************/
+
+
+// const seedSampleOrders = async () => {
+//   try {
+//     // 1. Create a sample user (or find existing)
+//     const user = await prisma.user.upsert({
+//       where: { mobile_no: "9999999999" },
+//       update: {},
+//       create: {
+//         mobile_no: "9999999999",
+//         name: "Sample User",
+//         isPhoneNoVerified: true,
+//         createdAt: new Date(),
+//         updatedAt: new Date(),
+//       },
+//     })
+
+//     // 2. Create a sample category
+//     const category = await prisma.category.upsert({
+//       where: { id: "sneakers-category" },  // Changed to use id instead of name
+//       update: {},
+//       create: {
+//         id: "sneakers-category",  // Added id field
+//         name: "Sneakers",
+//         description: "Sample sneakers category",
+//       },
+//     })
+
+//     // 3. Create 2 products with variants
+//     const product1 = await prisma.product.create({
+//       data: {
+//         name: "Air Max 2025",
+//         sku: "AMX-2025",
+//         slug: "air-max-2025",
+//         description: "Lightweight comfort shoes",
+//         price: 12000,
+//         category: { connect: { id: category.id } },
+//         status: "PUBLISHED",
+//       },
+//     })
+
+//     const color = await prisma.productColor.create({
+//       data: {
+//         color: "Black",
+//         productId: product1.id,
+//       },
+//     })
+
+//     const variant = await prisma.productVariant.create({
+//       data: {
+//         size: "SIZE_42",
+//         stock: 10,
+//         colorId: color.id,
+//       },
+//     })
+
+//     // 4. Create sample address
+//     const address = await prisma.address.create({
+//       data: {
+//         name: "Sample Address",
+//         phone: "9999999999",
+//         street: "123 Sample Street",
+//         city: "Sample City",
+//         state: "State",
+//         country: "Country",
+//         zipCode: "123456",
+//         userId: user.id,
+//       },
+//     })
+
+//     // 5. Create 3 sample orders with items
+//     const sampleOrders = await Promise.all(
+//       [1, 2, 3].map((i) =>
+//         prisma.order.create({
+//           data: {
+//             userId: user.id,
+//             total: 1200 * i,
+//             status: "COMPLETED",
+//             fulfillment: "DELIVERED",
+//             addressId: address.id,
+//             createdAt: new Date(),
+//             items: {
+//               create: [
+//                 {
+//                   productId: product1.id,
+//                   productVariantId: variant.id,
+//                   quantity: i,
+//                   priceAtOrder: 12000,
+//                   color: "Black",
+//                   productImage: "https://via.placeholder.com/150",
+//                   productName: "Air Max 2025",
+//                   size: "SIZE_42",
+//                 },
+//               ],
+//             },
+//           },
+//         })
+//       )
+//     )
+
+//     //6. Create sample orders pending and shipped
+//     await prisma.order.create({
+//       data: {
+//         userId: user.id,
+//         total: 1200,
+//         status: "PENDING",
+//         fulfillment: "PENDING",
+//         addressId: address.id,
+//         createdAt: new Date(),
+//         items: {
+//           create: [
+//             {
+//               productId: product1.id,
+//               productVariantId: variant.id,
+//               quantity: 1,
+//               priceAtOrder: 12000,
+//               color: "Black",
+//               productImage: "https://via.placeholder.com/150",
+//               productName: "Air Max 2025",
+//               size: "SIZE_42",
+//             },
+//           ],
+//         },
+//       },
+//     })
+
+//     await prisma.order.create({
+//       data: {
+//         userId: user.id,
+//         total: 1200,
+//         status: "COMPLETED",
+//         fulfillment: "DELIVERED",
+//         addressId: address.id,
+//         createdAt: new Date(),
+//         items: {
+//           create: [
+//             {
+//               productId: product1.id,
+//               productVariantId: variant.id,
+//               quantity: 1,
+//               priceAtOrder: 12000,
+//               color: "Black",
+//               productImage: "https://via.placeholder.com/150",
+//               productName: "Air Max 2025",
+//               size: "SIZE_42",
+//             },
+//           ],
+//         },
+//       },
+//     })
+
+//     // 7. Create sample orders with items
+//     await prisma.order.create({
+//       data: {
+//         userId: user.id,
+//         total: 1200,
+//         status: "COMPLETED",
+//         fulfillment: "DELIVERED",
+//         addressId: address.id,
+//         createdAt: new Date(),
+//         items: {
+//           create: [
+//             {
+//               productId: product1.id,
+//               productVariantId: variant.id,
+//               quantity: 1,
+//               priceAtOrder: 12000,
+//               color: "Black",
+//               productImage: "https://via.placeholder.com/150",
+//               productName: "Air Max 2025",
+//               size: "SIZE_42",
+//             },
+//           ],
+//         },
+//       },
+//     })
+
+
+//   } catch (err) {
+//     console.error("Error seeding orders:", err)
+//   }
+// }
+
+// seedSampleOrders()
+  // const seedCreateOldOrders = async () => {
+  //   try {
+  //     // pick old user id 
+  //     const user = await prisma.user.findFirst({
+  //       where: { mobile_no: "9999999999" },
+  //     })
+
+  //     if (!user) throw new Error("User not found")
+
+  //     // pick old category id
+  //     const category = await prisma.category.findFirst({
+  //       where: { name: "Sneakers" },
+  //     })
+
+  //     // pick old product id
+  //     const product = await prisma.product.findFirst({
+  //       where: { name: "Air Max 2025" },
+  //     })
+
+  //     if (!product) throw new Error("Product not found")
+
+  //     // pick old color id
+  //     const color = await prisma.productColor.findFirst({
+  //       where: { color: "Black" },
+  //     })
+
+  //     // pick old variant id
+  //     const variant = await prisma.productVariant.findFirst({
+  //       where: { size: "SIZE_42" },
+  //     })
+
+  //     if (!variant) throw new Error("Variant not found")
+
+  //     // pick old address id
+  //     const address = await prisma.address.findFirst({
+  //       where: { name: "Sample Address" },
+  //     })
+
+  //     if (!address) throw new Error("Address not found")
+
+  //     // create old orders
+  //     await prisma.order.create({
+  //       data: {
+  //         userId: user.id,
+  //         total: 1200,
+  //         status: "COMPLETED",
+  //         fulfillment: "DELIVERED",
+  //         addressId: address.id,
+  //         // one year old date
+  //         createdAt: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000),
+  //         items: {
+  //           create: [
+  //             {
+  //               productId: product.id,
+  //               productVariantId: variant.id,
+  //               quantity: 1,
+  //               priceAtOrder: 12000,
+  //               color: "Black",
+  //               productImage: "https://via.placeholder.com/150",
+  //               productName: "Air Max 2025",
+  //               size: "SIZE_42",
+  //             },
+  //           ],
+  //         },
+  //       },
+  //     })
+
+  //     // create random orders
+  //     for (let i = 0; i < 10; i++) {
+  //       await prisma.order.create({
+  //         data: {
+  //           userId: user.id,
+  //           total: 1200,
+  //           // random status
+  //           status: Math.random() > 0.5 ? "COMPLETED" : "PENDING",
+  //           fulfillment: Math.random() > 0.5 ? "DELIVERED" : "PENDING",
+  //           addressId: address.id,
+  //           // random date
+  //           createdAt: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000),
+  //           items: {
+  //             create: [
+  //               {
+  //                 productId: product.id,
+  //                 productVariantId: variant.id,
+  //                 quantity: 1,
+  //                 priceAtOrder: 12000,
+  //                 color: "Black",
+  //                 productImage: "https://via.placeholder.com/150",
+  //                 productName: "Air Max 2025",
+  //                 size: "SIZE_42",
+  //               },
+  //             ],
+  //           },
+  //         },
+  //       })
+  //     }
+  //   } catch (err) {
+  //     console.error("Error seeding orders:", err)
+  //   }
+  // }
 
 export default app;
 

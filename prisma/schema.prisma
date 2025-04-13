@@ -23,8 +23,6 @@ model Product {
   colors             ProductColor[]
   assets             ProductAsset[]
   ProductRating      ProductRating[]
-  ProductPerformance ProductPerformance[]
-  sales              SalesSummary[]
   OrderItem          OrderItem[]
   Wishlist           Wishlist[]
   tags               ProductTags[]
@@ -280,32 +278,32 @@ model ContactForm {
   updatedAt DateTime @updatedAt
 }
 
-model SalesSummary {
-  id           String   @id @default(cuid())
-  date         DateTime @unique
-  totalRevenue Float
-  salesGrowth  Float
-  totalOrders  Int
-  newCustomers Int
+// model SalesSummary {
+//   id           String   @id @default(cuid())
+//   date         DateTime @unique
+//   totalRevenue Float
+//   salesGrowth  Float
+//   totalOrders  Int
+//   newCustomers Int
 
-  productId String
-  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-}
+//   productId String
+//   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+// }
 
-model ProductPerformance {
-  id        String   @id @default(cuid())
-  productId String
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  date      DateTime @default(now())
-  revenue   Decimal  @default(0.0)
-  orders    Int      @default(0)
-  rating    Float?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+// model ProductPerformance {
+//   id        String   @id @default(cuid())
+//   productId String
+//   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+//   date      DateTime @default(now())
+//   revenue   Decimal  @default(0.0)
+//   orders    Int      @default(0)
+//   rating    Float?
+//   createdAt DateTime @default(now())
+//   updatedAt DateTime @updatedAt
 
-  @@unique([productId, date]) // Ensures one record per product per day
-  @@index([date]) // Adds an index on the 'date' field
-}
+//   @@unique([productId, date]) // Ensures one record per product per day
+//   @@index([date]) // Adds an index on the 'date' field
+// }
 
 model Wishlist {
   id        String   @id @default(cuid())
@@ -329,7 +327,7 @@ model Upoads {
 
 
 model Discount {
-  id            Int       @id @default(autoincrement())
+  id            String       @id @default(cuid())
   code          String    @unique
   type          DiscountType
   value         Float

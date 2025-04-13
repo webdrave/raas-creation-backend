@@ -321,6 +321,12 @@ const getAllProduct = async (
     },
     include: {
       assets: true,
+      colors: {
+        include: {
+          assets: true,
+          sizes: true,
+        },
+      },
       tags: true,
     },
     skip,

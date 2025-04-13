@@ -67,7 +67,7 @@ const addDiscount = async (req: Request, res: Response, next: NextFunction) => {
 
 const getDiscountById = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const id = parseInt(req.params.id)
+    const id = req.params.id 
     const discount = await prisma.discount.findUnique({ where: { id } })
 
     if (!discount) {
@@ -101,7 +101,7 @@ const getDiscountByName = async (req: Request, res: Response, next: NextFunction
 
 const updateDiscount = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const id = parseInt(req.params.id)
+    const id = req.params.id
     const {
       code,
       type,
@@ -135,7 +135,7 @@ const updateDiscount = async (req: Request, res: Response, next: NextFunction) =
 
 const deleteDiscount = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const id = parseInt(req.params.id)
+    const id = req.params.id
     await prisma.discount.delete({ where: { id } })
     res.status(HttpStatusCodes.NO_CONTENT).send()
   } catch (error) {
