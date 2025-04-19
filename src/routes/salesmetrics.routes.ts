@@ -5,6 +5,10 @@ import  getAllTimeMetricsControllers  from "../controllers/salesMetrics.controll
 const router = Router();
 
 router.get("/all-time", getAllTimeMetricsControllers.getAllTimeMetrics);
-// 📦 Get sales metrics
+
+// Get sales overwview
+router.get("/overview", getAllTimeMetricsControllers.getSalesOverview);
+
+router.get("/graph", getAllTimeMetricsControllers.getGraphData);
 
 export default router;

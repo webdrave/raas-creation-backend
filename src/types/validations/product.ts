@@ -21,6 +21,7 @@ export const addProductSchema = z.object({
     status: z.nativeEnum(ProductStatus, {
       errorMap: () => ({ message: "Invalid asset type" }),
     }),
+    tags: z.array(z.string()).optional(),
 });
 
 // id: string | undefined, name: string, assets: { url: string; type: string }[]
