@@ -27,6 +27,9 @@ router.post("/verify-otp",customersController.verfy_otp);
 router.post("/verify-otp",customersController.verfy_otp);
 
 router.post("/makeAdmin", authenticateJWT,isAdmin,customersController.makeAdmin);
+
+router.post("/change-password",authenticateJWT,isAdmin,customersController.changePassword);
+
 router.post("/reset-password",customersController.forgotPassword);
 router.get("/", authenticateJWT,customersController.getCustomer);
 router.put("/", authenticateJWT,customersController.updatecustomer);
