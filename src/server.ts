@@ -70,7 +70,6 @@ import productPerformanceRouter from './routes/productperformance.routes.js'
 // import shipRocketRoutes from './routes/shipRocket.routes.js'
 import discountRouter from './routes/discount.routes.js'
 import wishlistRoutes from './routes/wishlist.routes.js'
-import { prisma } from './utils/prismaclient.js';
 app.use(globalErrorHandler);
 app.use("/api/products", UserRouter);
 // app.use(Paths.Base, BaseRouter);
