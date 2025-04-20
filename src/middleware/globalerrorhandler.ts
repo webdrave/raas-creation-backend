@@ -101,7 +101,7 @@ export const globalErrorHandler = (
 declare global {
   namespace Express {
     interface Request {
-      user: {id:string , role: string}; // Add a `session` property to the Request interface
+      user: {id:string , role: string,name:string,mobile_no:string}; // Add a `session` property to the Request interface
     }
   }
 }
@@ -156,7 +156,16 @@ export const authenticateJWT = async (
       throw new RouteError(403, "Unauthorized: User not found");
     }
 
-    req.user = user;
+    if (!user.name || !user.mobile_no) {
+      throw new RouteError(403, "Unauthorized: Invalid user data");
+    }
+
+    req.user = {
+      id: user.id,
+      role: user.role,
+      name: user.name,
+      mobile_no: user.mobile_no
+    };
 
     next();
   } catch (error) {
@@ -164,7 +173,6 @@ export const authenticateJWT = async (
     throw new RouteError(403, "Unauthorized: Invalid token");
   }
 };
-
 
 export const isAdmin = (req: Request, res: Response, next: NextFunction) => {
   if (req.user.role === "USER") {

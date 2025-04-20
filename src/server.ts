@@ -67,7 +67,7 @@ import inventoryRouter from './routes/inventory.routes.js'
 import analyticsRoutes from './routes/analytics.routes.js'
 import getAllTimeMetricsRoutes from './routes/salesmetrics.routes.js'
 import productPerformanceRouter from './routes/productperformance.routes.js'
-import shipRocketRoutes from './routes/shipRocket.routes.js'
+// import shipRocketRoutes from './routes/shipRocket.routes.js'
 import discountRouter from './routes/discount.routes.js'
 import wishlistRoutes from './routes/wishlist.routes.js'
 import { prisma } from './utils/prismaclient.js';
@@ -98,7 +98,7 @@ app.use("/api/sales", getAllTimeMetricsRoutes);
 
 app.use("/api/productperformance", productPerformanceRouter);
 
-app.use("/api/shiprocket", authenticateJWT, shipRocketRoutes);
+// app.use("/api/shiprocket", authenticateJWT, shipRocketRoutes);
 
 app.use("/api/discounts", authenticateJWT, discountRouter);
 
