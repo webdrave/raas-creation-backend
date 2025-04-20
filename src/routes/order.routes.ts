@@ -9,7 +9,7 @@ router.post("/",authenticateJWT, orderController.createOrder);
 
 router.get("/tax", orderController.getTax);
 
-router.post("/tax", orderController.updateTax);
+router.post("/tax",authenticateJWT,isAdmin, orderController.updateTax);
 
 // 📦 Get all orders (Admin gets all, User gets only their orders)
 router.get("/",authenticateJWT, orderController.getAllOrders);

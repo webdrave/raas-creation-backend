@@ -90,6 +90,7 @@ const getBesSellers = async (
       img: variant.color.assets[0].asset_url, 
       name: variant.color?.product?.name ,
       price: variant.color.product.price,
+      slug: variant.color.product.slug,
       category: variant.color?.product.category.name , // Assuming category field exists
       discount: variant.color.product.discountPrice, // Assuming discount field exists
     };
@@ -122,6 +123,7 @@ const newArrivals = async (req: Request, res: Response, next: NextFunction) => {
     name: product.name,
     img: product.assets[0].asset_url,
     price: product.price,
+    slug: product.slug,
     discountPrice: product.discountPrice,
     category: product.category.name,
   }));

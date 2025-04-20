@@ -4,15 +4,15 @@ import { authenticateJWT,isAdmin } from '../middleware/globalerrorhandler.js';
 
 const router = Router();
 
-router.get("/",authenticateJWT,categoryController.getAllCategories);
+router.get("/",categoryController.getAllCategories);
 
-router.post("/", authenticateJWT,categoryController.addCategory);
+router.post("/", authenticateJWT,isAdmin,categoryController.addCategory);
 
-router.get("/:id",authenticateJWT,isAdmin, categoryController.getCategory);
+router.get("/:id", categoryController.getCategory);
 
-router.put("/:id", categoryController.updateCategory);
+router.put("/:id",authenticateJWT,isAdmin, categoryController.updateCategory);
 
-router.delete("/:id", categoryController.deleteCategory);
+router.delete("/:id",authenticateJWT,isAdmin, categoryController.deleteCategory);
 
 
 
