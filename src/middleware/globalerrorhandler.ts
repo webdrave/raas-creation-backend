@@ -101,7 +101,7 @@ export const globalErrorHandler = (
 declare global {
   namespace Express {
     interface Request {
-      user: any; // Add a `session` property to the Request interface
+      user: {id:string , role: string}; // Add a `session` property to the Request interface
     }
   }
 }
