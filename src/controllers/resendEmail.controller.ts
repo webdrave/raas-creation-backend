@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { Resend } from 'resend';
 import ENV from '../common/env.js';
 import { ValidationErr } from '../common/routeerror.js';
-import { prisma } from '../utils/prismaclient.js';
+import { prisma } from '../utils/prismaclient'
 
 const resend = new Resend(ENV.RESEND_API_KEY);
 

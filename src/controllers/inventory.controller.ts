@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response } from 'express';
-import { prisma } from "../utils/prismaclient.js";
+import { prisma } from "../utils/prismaclient";
 import HttpStatusCodes from '../common/httpstatuscode.js';
 import { ProductStatus } from '@prisma/client';
 

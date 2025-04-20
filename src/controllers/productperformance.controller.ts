@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import HttpStatusCodes from "../common/httpstatuscode.js";
 import { RouteError } from "../common/routeerror.js";
-import { prisma } from "../utils/prismaclient.js";
+import { prisma } from "../utils/prismaclient";
 import data from "../common/env.js";
 
 

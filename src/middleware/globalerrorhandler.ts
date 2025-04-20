@@ -5,7 +5,7 @@ import ENV from "../common/env.js";
 import { NodeEnvs } from "../common/constants.js";
 import { exceptionCodes } from "../common/prismafilter.js";
 import { decode } from "next-auth/jwt";
-import { prisma } from "../utils/prismaclient.js";
+import { prisma } from "../utils/prismaclient";
 import axios from "axios";
 import util from "util";
 

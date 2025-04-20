@@ -8,7 +8,7 @@ import {
   updateFulfillmentSchema,
 } from "../types/validations/order.js";
 
-import { prisma } from "../utils/prismaclient.js";
+import { prisma } from "../utils/prismaclient";
 import { orderProcessed } from "../utils/whatsappclient.js";
 
 /** ✅ Create a new order */

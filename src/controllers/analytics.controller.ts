@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import HttpStatusCodes from "../common/httpstatuscode.js";
-import { prisma } from "../utils/prismaclient.js";
+import { prisma } from "../utils/prismaclient";
 
 const getTopProducts = async (req: Request, res: Response, next: NextFunction) => {
   const limit = parseInt(req.query.limit as string) || 5;

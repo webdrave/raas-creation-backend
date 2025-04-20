@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express'
-import { prisma } from '../utils/prismaclient.js'
+import { prisma } from '../utils/prismaclient'
 import HttpStatusCodes from '../common/httpstatuscode.js'
 
 const getAllDiscounts = async (req: Request, res: Response, next: NextFunction) => {
