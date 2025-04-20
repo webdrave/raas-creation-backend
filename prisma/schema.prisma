@@ -8,25 +8,31 @@ datasource db {
 }
 
 model Product {
-  id                 String               @id @default(cuid())
-  name               String
-  sku                String
-  slug               String
-  description        String
-  price              Float
-  discountPrice      Float?
-  category_id        String
-  category           Category             @relation(fields: [category_id], references: [id])
-  createdAt          DateTime             @default(now())
-  updatedAt          DateTime             @updatedAt
-  status             ProductStatus        @default(DRAFT)
-  colors             ProductColor[]
-  assets             ProductAsset[]
-  ProductRating      ProductRating[]
-  ProductPerformance ProductPerformance[]
-  sales              SalesSummary[]
-  OrderItem          OrderItem[]
-  Wishlist           Wishlist[]
+  id            String          @id @default(cuid())
+  name          String
+  sku           String
+  slug          String
+  description   String
+  price         Float
+  discountPrice Float?
+  category_id   String
+  category      Category        @relation(fields: [category_id], references: [id])
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  status        ProductStatus   @default(DRAFT)
+  colors        ProductColor[]
+  assets        ProductAsset[]
+  ProductRating ProductRating[]
+  OrderItem     OrderItem[]
+  Wishlist      Wishlist[]
+  tags          ProductTags[]
+}
+
+model ProductTags {
+  id        String  @id @default(cuid())
+  tag       String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId String
 }
 
 model ProductColor {
@@ -114,21 +120,22 @@ model User {
 }
 
 model Address {
-  id      String @id @default(uuid())
-  name    String
-  phone   String
-  street  String
-  city    String
-  state   String
-  country String
-  zipCode String
-  userId  String // Foreign key to User
-  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  Order Order[]
+  id          String   @id @default(cuid())
+  firstName   String
+  lastName    String?
+  addressName String
+  phoneNumber String
+  street      String
+  aptNumber   String?
+  city        String
+  state       String
+  country     String
+  zipCode     String
+  userId      String // Foreign key to User
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  Order       Order[]
 }
 
 enum UserType {
@@ -272,32 +279,32 @@ model ContactForm {
   updatedAt DateTime @updatedAt
 }
 
-model SalesSummary {
-  id           String   @id @default(cuid())
-  date         DateTime @unique
-  totalRevenue Float
-  salesGrowth  Float
-  totalOrders  Int
-  newCustomers Int
+// model SalesSummary {
+//   id           String   @id @default(cuid())
+//   date         DateTime @unique
+//   totalRevenue Float
+//   salesGrowth  Float
+//   totalOrders  Int
+//   newCustomers Int
 
-  productId String
-  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-}
+//   productId String
+//   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+// }
 
-model ProductPerformance {
-  id        String   @id @default(cuid())
-  productId String
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  date      DateTime @default(now())
-  revenue   Decimal  @default(0.0)
-  orders    Int      @default(0)
-  rating    Float?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+// model ProductPerformance {
+//   id        String   @id @default(cuid())
+//   productId String
+//   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+//   date      DateTime @default(now())
+//   revenue   Decimal  @default(0.0)
+//   orders    Int      @default(0)
+//   rating    Float?
+//   createdAt DateTime @default(now())
+//   updatedAt DateTime @updatedAt
 
-  @@unique([productId, date]) // Ensures one record per product per day
-  @@index([date]) // Adds an index on the 'date' field
-}
+//   @@unique([productId, date]) // Ensures one record per product per day
+//   @@index([date]) // Adds an index on the 'date' field
+// }
 
 model Wishlist {
   id        String   @id @default(cuid())
@@ -311,10 +318,42 @@ model Wishlist {
   @@unique([userId, productId])
 }
 
-
 model Upoads {
   id        String   @id @default(cuid())
   url       String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model Discount {
+  id          String       @id @default(cuid())
+  code        String       @unique
+  type        DiscountType
+  value       Float
+  minPurchase Float? // Optional
+  usageLimit  Int? // Optional (null means unlimited)
+  usageCount  Int          @default(0)
+  startDate   DateTime
+  endDate     DateTime? // Optional (null means no expiration)
+  status      Status       @default(ACTIVE)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED_AMOUNT
+}
+
+enum Status {
+  ACTIVE
+  INACTIVE
+  EXPIRED
+}
+
+model ExtraData {
+  id              String @id @default(cuid())
+  CodLimit        Int?
+  GSTtax          Float?
+  ShiippingCharge Float?
 }

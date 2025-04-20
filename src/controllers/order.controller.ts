@@ -185,9 +185,6 @@ const getOrderById = async (req: Request, res: Response, next: NextFunction) => 
 
 /** ✅ Update order status */
 const updateOrderStatus = async (req: Request, res: Response, next: NextFunction) => {
-  if (!req.user || req.user.role !== "ADMIN") {
-    throw new RouteError(HttpStatusCodes.UNAUTHORIZED, "Unauthorized");
-  }
 
   const { id } = req.params;
   if (!id) {
@@ -209,9 +206,6 @@ const updateOrderStatus = async (req: Request, res: Response, next: NextFunction
 
 /** ✅ Update fulfillment status */
 const updateFulfillment = async (req: Request, res: Response, next: NextFunction) => {
-  if (!req.user || req.user.role !== "ADMIN") {
-    throw new RouteError(HttpStatusCodes.UNAUTHORIZED, "Unauthorized");
-  }
 
   const { id } = req.params;
   if (!id) {
@@ -233,9 +227,6 @@ const updateFulfillment = async (req: Request, res: Response, next: NextFunction
 
 /** ✅ Delete an order */
 const deleteOrder = async (req: Request, res: Response, next: NextFunction) => {
-  if (!req.user || req.user.role !== "ADMIN") {
-    throw new RouteError(HttpStatusCodes.UNAUTHORIZED, "Unauthorized");
-  }
 
   const { id } = req.params;
   if (!id) {
@@ -251,6 +242,51 @@ const deleteOrder = async (req: Request, res: Response, next: NextFunction) => {
   res.status(HttpStatusCodes.OK).json({ success: true, message: "Order deleted" });
 };
 
+const getTax = async (req: Request, res: Response, next: NextFunction) => {
+  const tax = await prisma.extraData.findFirst();
+  if (!tax) {
+    res.status(HttpStatusCodes.OK).json({ success: false, data: {
+      GSTtax: null,
+      ShiippingCharge: null,
+      CodLimit: null,
+    } });
+    return;
+  }
+  res.status(HttpStatusCodes.OK).json({ success: true, data: {
+    GSTtax: tax.GSTtax,
+    ShiippingCharge: tax.ShiippingCharge,
+    CodLimit: tax.CodLimit
+  } });
+};
+const updateTax = async (req: Request, res: Response, next: NextFunction) => {
+  const { tax } = req.body;
+
+  const { GSTtax, ShiippingCharge, CodLimit } = tax;
+
+  const existingData = await prisma.extraData.findFirst();
+
+  if (!existingData) {
+    await prisma.extraData.create({
+      data: {
+        id: "1",
+        GSTtax,
+        ShiippingCharge,
+        CodLimit,
+      },
+    });
+  } else {
+    await prisma.extraData.update({
+      where: { id: "1" },
+      data: {
+        GSTtax,
+        ShiippingCharge,
+        CodLimit,
+      },
+    });
+  }
+  
+  res.status(HttpStatusCodes.OK).json({ success: true, message: "Tax updated" });
+};
 export default {
   createOrder,
   getAllOrders,
@@ -258,4 +294,6 @@ export default {
   updateOrderStatus,
   updateFulfillment,
   deleteOrder,
+  getTax,
+  updateTax,
 };

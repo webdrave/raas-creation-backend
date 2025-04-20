@@ -4,6 +4,7 @@ import cloudinary from 'cloudinary';
 import { RouteError } from '../common/routeerror.js';
 import HttpStatusCodes from '../common/httpstatuscode.js';
 import { prisma } from '../utils/prismaclient.js';
+import { authenticateJWT, isAdmin } from '../middleware/globalerrorhandler.js';
 const router = Router();
 
 const storage = multer.memoryStorage();
@@ -20,7 +21,7 @@ cloudinary.v2.config({
     api_secret: process.env.CLOUDINARY_API_SECRET!,
 });
 
-router.post("/", upload.single('file'), async (req, res, next) => {
+router.post("/",authenticateJWT,isAdmin, upload.single('file'), async (req, res, next) => {
     if (!req.file) {
         throw new RouteError(HttpStatusCodes.NOT_FOUND, "No file was uploaded");
     }
@@ -48,7 +49,7 @@ router.post("/", upload.single('file'), async (req, res, next) => {
 
     res.status(HttpStatusCodes.OK).json({ url: uploadResult.secure_url });
 });
-router.post("/multiple", upload.array('files', 10), async (req, res, next) => {
+router.post("/multiple",authenticateJWT,isAdmin, upload.array('files', 10), async (req, res, next) => {
     if (!req.files || req.files.length === 0) {
         throw new RouteError(HttpStatusCodes.NOT_FOUND, "No files were uploaded");
     }
@@ -94,7 +95,7 @@ router.post("/multiple", upload.array('files', 10), async (req, res, next) => {
 });
 
 
-router.get("/previous", async (req, res) => {
+router.get("/previous",authenticateJWT,isAdmin, async (req, res, next) => {
     const { cursor, limit = 20 } = req.query
 
     const uploads = await prisma.upoads.findMany({

@@ -40,14 +40,12 @@ const slugify = async (text: string): Promise<string> => {
 
 /** ✅ Add a new product */
 const addProduct = async (req: Request, res: Response, next: NextFunction) => {
-  // if(!req.user && req?.user?.role !== "ADMIN"){
-  //   throw new RouteError(HttpStatusCodes.UNAUTHORIZED, "Unauthorized");
-  // }
+  
   const parsed = addProductSchema.safeParse(req.body);
   if (!parsed.success) {
     throw new ValidationErr(parsed.error.errors);
   }
-  const { name, description, price,discountPrice, category_id, assets, status, sku } =
+  const { name, description, price,discountPrice, category_id, assets, status, sku,tags } =
     parsed.data;
 
   const slug = await slugify(name);
@@ -69,9 +67,11 @@ const addProduct = async (req: Request, res: Response, next: NextFunction) => {
             type: asset.type,
           })) || [],
       },
-    
+      tags: {
+        create: tags?.map((tag: string) => ({ tag })),
+      }
     },
-    include: { assets: true },
+    include: { assets: true, tags: true },
   });
 
   res.status(HttpStatusCodes.CREATED).json({ success: true, product });
@@ -216,18 +216,17 @@ const deleteAsset = async (req: Request, res: Response, next: NextFunction) => {
 
 /** ✅ Get a product with colors and variants */
 const getProduct = async (req: Request, res: Response, next: NextFunction) => {
-  // if(!req.user && req?.user?.role !== "ADMIN"){
-  //   throw new RouteError(HttpStatusCodes.UNAUTHORIZED, "Unauthorized");
-  // }
+
   const { id } = req.params;
   if (!id) {
     throw new RouteError(HttpStatusCodes.BAD_REQUEST, "Missing product id");
   }
 
-  const product = await prisma.product.findUnique({
+  let product = await prisma.product.findUnique({
     where: { id },
     include: {
       assets: true,
+      tags: true,
       colors: {
         include: {
           assets: true,
@@ -236,6 +235,12 @@ const getProduct = async (req: Request, res: Response, next: NextFunction) => {
       },
     },
   });
+
+  product = {
+    ...product,
+    // @ts-ignore
+    tags: product.tags.map((tag) => tag.tag),
+  }
 
   if (!product) {
     throw new RouteError(HttpStatusCodes.NOT_FOUND, "Product not found");
@@ -243,18 +248,17 @@ const getProduct = async (req: Request, res: Response, next: NextFunction) => {
   res.status(HttpStatusCodes.OK).json({ success: true, product });
 };
 const getSlugProduct = async (req: Request, res: Response, next: NextFunction) => {
-  // if(!req.user && req?.user?.role !== "ADMIN"){
-  //   throw new RouteError(HttpStatusCodes.UNAUTHORIZED, "Unauthorized");
-  // }
+
   const { slug } = req.params;
   if (!slug) {
     throw new RouteError(HttpStatusCodes.BAD_REQUEST, "Missing product id");
   }
 
-  const product = await prisma.product.findFirst({
+  let product = await prisma.product.findFirst({
     where: { slug },
     include: {
       assets: true,
+      tags: true,
       colors: {
         include: {
           assets: true,
@@ -263,6 +267,12 @@ const getSlugProduct = async (req: Request, res: Response, next: NextFunction) =
       },
     },
   });
+
+  product = {
+    ...product,
+    // @ts-ignore
+    tags: product.tags.map((tag) => tag.tag),
+  }
 
   if (!product) {
     throw new RouteError(HttpStatusCodes.NOT_FOUND, "Product not found");
@@ -295,7 +305,7 @@ const getAllProduct = async (
   
   const totalPages = Math.ceil(totalCount / limit);
   
-  const products = await prisma.product.findMany({
+  let products = await prisma.product.findMany({
     where: {
       OR: [
         { name: { contains: search, mode: 'insensitive' } },
@@ -305,10 +315,23 @@ const getAllProduct = async (
     },
     include: {
       assets: true,
+      colors: {
+        include: {
+          assets: true,
+          sizes: true,
+        },
+      },
+      tags: true,
     },
     skip,
     take: limit,
   });
+
+  // @ts-ignore
+  products = products.map((product) => ({
+    ...product,
+    tags: product.tags.map((tag) => tag.tag),
+  }));
   
   res.status(HttpStatusCodes.OK).json({ 
     success: true, 
@@ -345,7 +368,7 @@ const updateProduct = async (
     throw new RouteError(HttpStatusCodes.NOT_FOUND, "Product not found");
   }
 
-  const { name, description, price, discountPrice, category_id,  assets, status } = parsed.data;
+  const { name, description, price, discountPrice, category_id,  assets, status, tags } = parsed.data;
 
   // First, delete existing assets if new ones are provided
   if (assets && assets.length > 0) {
@@ -354,6 +377,21 @@ const updateProduct = async (
         productId: id,
         colorId: null 
       }
+    });
+  }
+
+  // update product tags
+  await prisma.productTags.deleteMany({
+    where: {
+      productId: id
+    }
+  });
+  if (tags && tags.length > 0) {
+    await prisma.productTags.createMany({
+      data: tags.map((tag) => ({
+        tag,
+        productId: id
+      }))
     });
   }
 
@@ -383,9 +421,7 @@ const updateProduct = async (
 };
 
 const updateStatus = async (req: Request, res: Response, next: NextFunction) => {
-  // if(!req.user && req?.user?.role !== "ADMIN"){
-  //   throw new RouteError(HttpStatusCodes.UNAUTHORIZED, "Unauthorized");
-  // }
+
   const { id } = req.params; 
   const { status } = req.body;
   if (!id) {
@@ -404,9 +440,7 @@ const updateStatus = async (req: Request, res: Response, next: NextFunction) => 
 
 
 const deleteProduct = async (req: Request, res: Response, next: NextFunction) => {
-  // if(!req.user && req?.user?.role !== "ADMIN"){
-  //   throw new RouteError(HttpStatusCodes.UNAUTHORIZED, "Unauthorized");
-  // }
+
   const { id } = req.params;
   if (!id) {
     throw new RouteError(HttpStatusCodes.BAD_REQUEST, "Missing product id");
@@ -423,9 +457,7 @@ const deleteProduct = async (req: Request, res: Response, next: NextFunction) =>
 
 /** ✅ Delete a product color */
  const deleteColor = async (req: Request, res: Response, next: NextFunction) => {
-  if(!req.user && req?.user?.role !== "ADMIN"){
-    throw new RouteError(HttpStatusCodes.UNAUTHORIZED, "Unauthorized");
-  }
+ 
   const { id } = req.params;
   if (!id) {
     throw new RouteError(HttpStatusCodes.BAD_REQUEST, "Missing color id");
@@ -442,9 +474,7 @@ const deleteProduct = async (req: Request, res: Response, next: NextFunction) =>
 
 /** ✅ Delete a product variant (size) */
  const deleteVariant = async (req: Request, res: Response, next: NextFunction) => {
-  if(!req.user && req?.user?.role !== "ADMIN"){
-    throw new RouteError(HttpStatusCodes.UNAUTHORIZED, "Unauthorized");
-  }
+
   const { id } = req.params;
   if (!id) {
     throw new RouteError(HttpStatusCodes.BAD_REQUEST, "Missing variant id");

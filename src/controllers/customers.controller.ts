@@ -27,17 +27,34 @@ const allCustomers = async (
   next: NextFunction
 ) => {
   try {
-    // Authorization check (commented out)
-    // if (!req.user || req.user.role !== "ADMIN") {
-    //   return res.status(403).json({ success: false, message: "Forbidden" });
-    // }
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const search = (req.query.search as string) || '';
+
+    const skip = (page - 1) * limit;
+
+    const totalCount = await prisma.user.count({
+      where: {
+        OR: [
+          { name: { contains: search, mode: 'insensitive' } },
+          { mobile_no: { contains: search, mode: 'insensitive' } }
+        ]
+      }
+    });
+
+    const totalPages = Math.ceil(totalCount / limit);
 
     const customers = await prisma.user.findMany({
+      where: {
+        OR: [
+          { name: { contains: search, mode: 'insensitive' } },
+          { mobile_no: { contains: search, mode: 'insensitive' } }
+        ]
+      },
       select: {
         id: true,
         name: true,
         mobile_no: true,
-
         Order: {
           select: {
             id: true,
@@ -48,31 +65,56 @@ const allCustomers = async (
             createdAt: "desc",
           },
         }
+      },
+      skip,
+      take: limit
+    });
 
-      }})
-  
-      const formattedCustomers = customers.map((customer: { Order: any[]; id: any; name: any; mobile_no: any; }) => {
-        const totalOrders = customer.Order.length;
-        const totalSpent = customer.Order.reduce((sum, order) => sum + order.total, 0);
-        const lastOrder = customer.Order[0]?.createdAt || null;
-  
-        return {
-          id: customer.id,
-          name: customer.name || "N/A",
-         mobile_no: customer.mobile_no,
-          totalOrders,
-          totalSpent,
-          lastOrder,
-        };
-      });
-  
-      res.json({ success: true, data: formattedCustomers });
-    } catch (error) {
-      console.error("Error fetching customers:", error);
-      throw new RouteError(HttpStatusCodes.INTERNAL_SERVER_ERROR, "Failed to fetch customers");
-    }
-  };
- const updatecustomer = async(req:Request, res:Response, next:NextFunction) => {
+    const formattedCustomers = customers.map((customer: { Order: any[]; id: any; name: any; mobile_no: any; }) => {
+      const totalOrders = customer.Order.length;
+      const totalSpent = customer.Order.reduce((sum, order) => sum + order.total, 0);
+      const lastOrder = customer.Order[0]?.createdAt || null;
+
+      return {
+        id: customer.id,
+        name: customer.name || "N/A",
+        mobile_no: customer.mobile_no,
+        totalOrders,
+        totalSpent,
+        lastOrder,
+      };
+    });
+
+    res.json({
+      success: true,
+      data: formattedCustomers,
+      pagination: {
+        totalPages,
+        currentPage: page,
+        totalItems: totalCount,
+        itemsPerPage: limit
+      }
+    });
+  } catch (error) {
+    console.error("Error fetching customers:", error);
+    throw new RouteError(HttpStatusCodes.INTERNAL_SERVER_ERROR, "Failed to fetch customers");
+  }
+};
+
+const changePassword = async (req: Request, res: Response, next: NextFunction) => {
+  const { customerId, newPassword } = req.body;
+  const salt = await bcryptjs.genSalt(10);
+  const hashedPassword = await bcryptjs.hash(newPassword, salt);
+  await prisma.user.update({
+    where: { id: customerId },
+    data: {
+      password: hashedPassword,
+    },
+  })  
+  res.status(HttpStatusCodes.OK).json({ success: true, message: "Password updated successfully" });
+};
+
+const updatecustomer = async (req: Request, res: Response, next: NextFunction) => {
   const { id } = req.user;
 
   if (!id) {
@@ -106,13 +148,14 @@ const getCustomer = async (req: Request, res: Response, next: NextFunction) => {
 
   const customer = await prisma.user.findUnique({
     where: { id },
-    select:{
+    select: {
       id: true,
       name: true,
       mobile_no: true,
       email: true
-    
-    }})
+
+    }
+  })
 
   res.status(HttpStatusCodes.OK).json({ success: true, customer });
 
@@ -129,19 +172,25 @@ const addAddress = async (req: Request, res: Response, next: NextFunction) => {
   if (!parsedData.success) {
     throw new ValidationErr(parsedData.error.errors);
   }
-  console.log(parsedData.data);
 
   const addressCreate = await prisma.address.create({
     data: {
       userId: id,
-      ...parsedData.data,
+      street: parsedData.data.street,
+      city: parsedData.data.city,
+      zipCode: parsedData.data.zipCode,
+      state: parsedData.data.state,
+      country: parsedData.data.country,
+      phoneNumber: parsedData.data.phoneNumber,
+      addressName: parsedData.data.addressName,
+      firstName: parsedData.data.firstName ?? "",
+      lastName: parsedData.data.lastName ?? "",
+      aptNumber: parsedData.data.aptNumber ?? "",
     },
   });
 
   res.status(HttpStatusCodes.OK).json({ success: true, addressCreate });
-};
-
-const deleteAddress = async (
+}; const deleteAddress = async (
   req: Request,
   res: Response,
   next: NextFunction
@@ -255,7 +304,7 @@ const getOtpByNumber = async (
 
   await sendOtp(getOtp, parsedData.data.mobile_no);
 
-  const jwt = await generateToken({  userphone: parsedData.data.mobile_no,type:parsedData.data.type });
+  const jwt = await generateToken({ userphone: parsedData.data.mobile_no, type: parsedData.data.type });
   await prisma.otp.create({
     data: {
       userphone: parsedData.data.mobile_no,
@@ -275,21 +324,21 @@ const getOtpByJwt = async (
   next: NextFunction
 ) => {
   console.log(req.body.jwt);
-  const data:any = verifyToken(req.body.jwt);
+  const data: any = verifyToken(req.body.jwt);
   ;
   console.log(data);
-  if(!data){
+  if (!data) {
     throw new RouteError(HttpStatusCodes.UNAUTHORIZED, "Invalid JWT");
   }
-  
 
- 
+
+
 
 
 
   const findOtp = await prisma.otp.findUnique({
     where: {
-      userphone:data.userphone,
+      userphone: data.userphone,
     },
   });
 
@@ -305,7 +354,7 @@ const getOtpByJwt = async (
 
   await sendOtp(getOtp, data.userphone);
 
-  const jwt = await generateToken({  userphone: data.userphone,type:data.type });
+  const jwt = await generateToken({ userphone: data.userphone, type: data.type });
   await prisma.otp.create({
     data: {
       userphone: data.userphone,
@@ -347,7 +396,7 @@ const verfy_otp = async (req: Request, res: Response, next: NextFunction) => {
   }
 
   const { otp, jwt } = parseddata.data;
-  console.log(jwt,otp);
+  console.log(jwt, otp);
 
   const verifyJwt: any = verifyToken(jwt)
   console.log(verifyJwt);
@@ -360,12 +409,12 @@ const verfy_otp = async (req: Request, res: Response, next: NextFunction) => {
 
   const findOtp = await prisma.otp.findUnique({
     where: {
-     userphone:verifyJwt.userphone,
+      userphone: verifyJwt.userphone,
       otp: otp,
-      jwt:jwt
+      jwt: jwt
     },
   });
-  if (!findOtp ) {
+  if (!findOtp) {
     throw new RouteError(HttpStatusCodes.BAD_REQUEST, "Invalid OTP");
   }
 
@@ -392,7 +441,7 @@ const verfy_otp = async (req: Request, res: Response, next: NextFunction) => {
     const token = generateToken({
       mobile_no: findOtp.userphone,
       id: findOtp.id,
-      
+
     });
     await prisma.otp.update({
       where: {
@@ -416,7 +465,7 @@ const forgotPassword = async (
   res: Response,
   next: NextFunction
 ) => {
- 
+
   const { password, token } = req.body;
   const parsedData = forgetpasswordSchema.safeParse(req.body);
 
@@ -424,11 +473,11 @@ const forgotPassword = async (
     throw new ValidationErr(parsedData.error.errors);
   }
   const tokendata: any = verifyToken(token);
-console.log(tokendata);
+  console.log(tokendata);
   if (!tokendata) {
     throw new RouteError(HttpStatusCodes.BAD_REQUEST, "Invalid token");
   }
- 
+
 
   const otp = await prisma.otp.findUnique({
     where: {
@@ -474,7 +523,7 @@ const makeAdmin = async (req: Request, res: Response, next: NextFunction) => {
     throw new RouteError(HttpStatusCodes.BAD_REQUEST, "User not found");
   }
 
-  if ( user.role === "ADMIN") {
+  if (user.role === "ADMIN") {
     throw new RouteError(HttpStatusCodes.BAD_REQUEST, "User is already an admin");
   }
 
@@ -502,6 +551,5 @@ export default {
   verfy_otp,
   makeAdmin,
   getCustomer,
-
-
+  changePassword,
 };
