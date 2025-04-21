@@ -163,12 +163,12 @@ const getOrderById = async (req: Request, res: Response, next: NextFunction) => 
       orderId: id,
       paymentMethod: !myOrder?.paid ? "Cash on Delivery" : "RAZORPAY",
       shippingAddress : {
-        name : myOrder?.address?.name,
+        name : myOrder?.address?.firstName,
         street : myOrder?.address?.street,
         city : myOrder?.address?.city,
         state : myOrder?.address?.state,
         pincode : myOrder?.address?.zipCode,
-        phone : myOrder?.address?.phone,
+        phone : myOrder?.address?.phoneNumber,
       },
       timeline: [
         { status: "Order Placed", date: "5 March 2024, 10:30 AM", completed: true },

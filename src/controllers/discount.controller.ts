@@ -93,7 +93,7 @@ const getDiscountByName = async (req: Request, res: Response, next: NextFunction
         return;
     }
 
-    res.status(HttpStatusCodes.OK).json(discount)
+    res.status(HttpStatusCodes.OK).json({success: true, discount});
   } catch (error) {
     next(error)
   }

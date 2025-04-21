@@ -7,7 +7,6 @@ import { exceptionCodes } from "../common/prismafilter.js";
 import { decode } from "next-auth/jwt";
 import { prisma } from "../utils/prismaclient.js";
 import axios from "axios";
-import util from "util";
 
 
 const cleanMessage = (message: string) => message.replace(/(\r\n|\r|\n)/g, " ");
@@ -101,7 +100,7 @@ export const globalErrorHandler = (
 declare global {
   namespace Express {
     interface Request {
-      user: {id:string , role: string}; // Add a `session` property to the Request interface
+      user: {id:string , role: string,name:string,mobile_no:string}; // Add a `session` property to the Request interface
     }
   }
 }
@@ -156,7 +155,16 @@ export const authenticateJWT = async (
       throw new RouteError(403, "Unauthorized: User not found");
     }
 
-    req.user = user;
+    if (!user.name || !user.mobile_no) {
+      throw new RouteError(403, "Unauthorized: Invalid user data");
+    }
+
+    req.user = {
+      id: user.id,
+      role: user.role,
+      name: user.name,
+      mobile_no: user.mobile_no
+    };
 
     next();
   } catch (error) {
@@ -164,7 +172,6 @@ export const authenticateJWT = async (
     throw new RouteError(403, "Unauthorized: Invalid token");
   }
 };
-
 
 export const isAdmin = (req: Request, res: Response, next: NextFunction) => {
   if (req.user.role === "USER") {
