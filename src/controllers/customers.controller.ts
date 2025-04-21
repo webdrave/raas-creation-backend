@@ -152,8 +152,8 @@ const getCustomer = async (req: Request, res: Response, next: NextFunction) => {
       id: true,
       name: true,
       mobile_no: true,
-      email: true
-
+      email: true,
+      image: true,
     }
   })
 

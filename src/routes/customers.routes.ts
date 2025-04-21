@@ -7,13 +7,13 @@ const router = Router();
 //fix routes
 router.get("/allcustomers",authenticateJWT,isAdmin, customersController.allCustomers);
 
-router.put("/customer/:addressId", authenticateJWT, customersController.updatecustomer);
+router.put("/customer/:id", authenticateJWT, customersController.updatecustomer);
 
 router.get("/customer", authenticateJWT, customersController.getCustomer);
 
-router.delete("address/:id", authenticateJWT, customersController.deleteAddress);
+router.delete("/address/:addressId", authenticateJWT, customersController.deleteAddress);
 
-router.put("/address/:id", authenticateJWT, customersController.updateAddress);
+router.put("/address/:addressId", authenticateJWT, customersController.updateAddress);
 
 router.post("/address", authenticateJWT, customersController.addAddress);
 
