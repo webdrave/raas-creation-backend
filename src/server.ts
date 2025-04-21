@@ -38,8 +38,20 @@ if (ENV.NODE_ENV === NodeEnvs.Dev) {
 // WebHook
 import webhookRoutes from './routes/webhook.routes.js'
 
+
+const healthCheck = express.Router();
+
+healthCheck.get("/", (req: Request, res: Response) => {
+  res.status(HttpStatusCodes.OK).json({
+    success: true,
+    message: "Server is running",
+  });
+});
+
+
 app.use("/api/webhook", webhookRoutes);
 
+app.use("/api/health", healthCheck);
 
 
 //CORS
