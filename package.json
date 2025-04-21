@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "start": "prisma generate && set NODE_ENV=PRODUCTION & node dist/index.js",
-    "build": "npx tsc -p .",
+    "build": "npx tsc",
     "dev": "prisma generate && concurrently \"npx tsc -w\" \"nodemon dist/index.js\"",
     "watch": "npx tsc -w"
   },
