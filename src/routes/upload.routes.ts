@@ -3,7 +3,7 @@ import multer from 'multer';
 import cloudinary from 'cloudinary';
 import { RouteError } from '../common/routeerror.js';
 import HttpStatusCodes from '../common/httpstatuscode.js';
-import { prisma } from '../utils/prismaclient'
+import { prisma } from '../utils/prismaclient.js'
 import { authenticateJWT, isAdmin } from '../middleware/globalerrorhandler.js';
 const router = Router();
 

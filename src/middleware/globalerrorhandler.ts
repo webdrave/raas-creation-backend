@@ -5,9 +5,8 @@ import ENV from "../common/env.js";
 import { NodeEnvs } from "../common/constants.js";
 import { exceptionCodes } from "../common/prismafilter.js";
 import { decode } from "next-auth/jwt";
-import { prisma } from "../utils/prismaclient.ts";
+import { prisma } from "../utils/prismaclient.js";
 import axios from "axios";
-import util from "util";
 
 
 const cleanMessage = (message: string) => message.replace(/(\r\n|\r|\n)/g, " ");

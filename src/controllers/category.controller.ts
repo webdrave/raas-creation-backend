@@ -6,7 +6,7 @@ import {
     updateCategorySchema,
 } from "../types/validations/category.js";
 
-import { prisma } from "../utils/prismaclient";
+import { prisma } from "../utils/prismaclient.js";
 
 /** ✅ Add a new category */
 const addCategory = async (req: Request, res: Response, next: NextFunction) => {

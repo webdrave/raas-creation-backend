@@ -10,7 +10,7 @@ import {
   updateColorSchema,
 } from "../types/validations/product.js";
 
-import { prisma } from "../utils/prismaclient";
+import { prisma } from "../utils/prismaclient.js";
 
 const cleanSlug = (text: string): string => {
   return text
