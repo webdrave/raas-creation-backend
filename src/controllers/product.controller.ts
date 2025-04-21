@@ -290,29 +290,88 @@ const getAllProduct = async (
   const limit = parseInt(req.query.limit as string) || 10;
   const search = (req.query.search as string) || '';
   const status = req.query.status as "PUBLISHED" | "DRAFT" | undefined;
-  
+  const minPrice = parseFloat(req.query.min_price as string);
+  const maxPrice = parseFloat(req.query.max_price as string);
+  const sortBy = (req.query.sort_by as string) || 'createdAt';
+  const sortOrder = (req.query.sort_order as string) || 'desc';
+  const color = req.query.color as string;
+  const size = req.query.size as string;
+  const categoryQuery = req.query.category as string;
+
+  const categories = categoryQuery ? categoryQuery.split(',') : [];
+  const sizes = size ? size.split(',') : [];
+
   const skip = (page - 1) * limit;
+
+  const priceFilter = {
+    ...(minPrice && { gte: minPrice }),
+    ...(maxPrice && { lte: maxPrice }),
+  };
+
+  const whereClause: any = {
+    OR: [
+      { name: { contains: search, mode: 'insensitive' } },
+      { description: { contains: search, mode: 'insensitive' } },
+    ],
+    ...(status && { status }),
+    ...(Object.keys(priceFilter).length > 0 && { price: priceFilter }),
+    ...(categories.length > 0 && {
+      category_id: {
+        in: categories,
+      }
+    }),
+    ...(color && {
+      colors: {
+        some: {
+          color: {
+            equals: color,
+            mode: 'insensitive',
+          },
+        },
+      },
+    }),
+    ...(sizes.length > 0 && {
+      colors: {
+        some: {
+          sizes: {
+            some: {
+              AND: [
+                {
+                  size: {
+                    in: sizes as any,
+                  },
+                },
+                {
+                  stock: {
+                    gt: 0,
+                  },
+                },
+              ],
+            },
+          },
+        },
+      },
+    }),
+    ...(sizes.length === 0 && {
+      colors: {
+        some: {
+          sizes: {
+            some: {
+              stock: {
+                gt: 0,
+              },
+            },
+          },
+        },
+      },
+    }),
+  };
   
-  const totalCount = await prisma.product.count({
-    where: {
-      OR: [
-        { name: { contains: search, mode: 'insensitive' } },
-        { description: { contains: search, mode: 'insensitive' } }
-      ],
-      ...(status && { status })
-    }
-  });
-  
-  const totalPages = Math.ceil(totalCount / limit);
-  
-  let products = await prisma.product.findMany({
-    where: {
-      OR: [
-        { name: { contains: search, mode: 'insensitive' } },
-        { description: { contains: search, mode: 'insensitive' } }
-      ],
-      ...(status && { status })
-    },
+
+  const totalCount = await prisma.product.count({ where: whereClause });
+
+  const products = await prisma.product.findMany({
+    where: whereClause,
     include: {
       assets: true,
       colors: {
@@ -323,25 +382,29 @@ const getAllProduct = async (
       },
       tags: true,
     },
+    orderBy: {
+      [sortBy]: sortOrder,
+    },
     skip,
     take: limit,
   });
 
-  // @ts-ignore
-  products = products.map((product) => ({
+  const transformedProducts = products.map((product) => ({
     ...product,
     tags: product.tags.map((tag) => tag.tag),
   }));
-  
-  res.status(HttpStatusCodes.OK).json({ 
-    success: true, 
-    products,
+
+  const totalPages = Math.ceil(totalCount / limit);
+
+  res.status(200).json({
+    success: true,
+    products: transformedProducts,
     pagination: {
       totalPages,
       currentPage: page,
       totalItems: totalCount,
-      itemsPerPage: limit
-    }
+      itemsPerPage: limit,
+    },
   });
 };
 
