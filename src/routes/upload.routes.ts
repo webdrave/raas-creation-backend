@@ -94,7 +94,6 @@ router.post("/multiple",authenticateJWT,isAdmin, upload.array('files', 10), asyn
     res.status(HttpStatusCodes.OK).json({ urls });
 });
 
-
 router.get("/previous",authenticateJWT,isAdmin, async (req, res, next) => {
     const { cursor, limit = 20 } = req.query
 
@@ -110,5 +109,50 @@ router.get("/previous",authenticateJWT,isAdmin, async (req, res, next) => {
     res.json({ uploads, nextCursor })
 })
 
+router.post("/profile",authenticateJWT, upload.single('file'), async (req, res, next) => {
+    if (!req.file) {
+        throw new RouteError(HttpStatusCodes.NOT_FOUND, "No file was uploaded");
+    }
+
+    const uploadResult = await new Promise<cloudinary.UploadApiResponse>((resolve, reject) => {
+        const uploadStream = cloudinary.v2.uploader.upload_stream(
+            {
+                resource_type: "auto",
+                folder: "uploads",
+                timeout: 600000,
+                chunk_size: 6000000 // 6MB chunks for better upload handling
+            },
+            (error, result) => {
+                if (error) {
+                    console.error("Cloudinary Upload Error:", error);
+                    reject(error);
+                } else {
+                    resolve(result!);
+                }
+            }
+        );
+
+        uploadStream.end(req.file?.buffer);
+    });
+
+    const user = await prisma.user.findUnique({
+        where: { id: req.user.id },
+    });
+    if (!user) {
+        throw new RouteError(HttpStatusCodes.NOT_FOUND, "User not found");
+    }
+
+    if (user.image) {
+        await cloudinary.v2.uploader.destroy(user.image);
+    }
+
+    await prisma.user.update({
+        where: { id: req.user.id },
+        data: {
+            image: uploadResult.secure_url,
+        },
+    });
+    res.status(HttpStatusCodes.OK).json({ url: uploadResult.secure_url });
+});
 
 export default router;
