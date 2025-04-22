@@ -95,7 +95,7 @@ const createOrder = async (req: Request, res: Response, next: NextFunction) => {
     formData.append(`products[${index}][name]`, item.productName + " " + item.size + " " + item.color);
     formData.append(`products[${index}][qty]`, item.quantity.toString());
     formData.append(`products[${index}][price]`, item.priceAtOrder.toString());
-    formData.append(`products[${index}][sku]`, item.productVariantId.toString());
+    formData.append(`products[${index}][sku]`, order.id.toString());
   });
 
   const data = await axios.post(
@@ -213,44 +213,7 @@ const getOrderById = async (req: Request, res: Response, next: NextFunction) => 
     include: { items: true, address: true },
   });
 
-  const order = {
-    status: myOrder?.DeliveryStatus,
-    message: myOrder?.etd ? `Expected Delivery On ${myOrder?.etd.slice(0, 10)}` : "Order is being processed",
-    color: "bg-yellow-500",
-    actions: (myOrder?.status === "COMPLETED" || myOrder?.status === "CANCELLED") ? [] : ["Cancel Order"],
-    awb: myOrder?.awb,
-    products: myOrder?.items.map((item) => ({
-      id: item.productId,
-      productName: item.productName,
-      size: item.size,
-      quantity: item.quantity,
-      productColor: item.color,
-      price: item.priceAtOrder,
-      image: item.productImage,
-    })),
-    totalPrice: myOrder?.total,
-    orderDate: myOrder?.createdAt.toISOString().slice(0, 10),
-    orderId: id,
-    paymentMethod: !myOrder?.paid ? "Cash on Delivery" : "RAZORPAY",
-    shippingAddress: {
-      name: myOrder?.address?.firstName,
-      street: myOrder?.address?.street,
-      city: myOrder?.address?.city,
-      state: myOrder?.address?.state,
-      pincode: myOrder?.address?.zipCode,
-      phone: myOrder?.address?.phoneNumber,
-    },
-    timeline: [
-      { status: "Order Placed", date: "5 March 2024, 10:30 AM", completed: true },
-      { status: "Payment Confirmed", date: "5 March 2024, 11:15 AM", completed: true },
-      { status: "Processing", date: "6 March 2024, 9:00 AM", completed: true },
-      { status: "Shipped", date: "7 March 2024, 2:45 PM", completed: true },
-      { status: "Out for Delivery", date: "Expected 19 March 2024", completed: false },
-      { status: "Delivered", date: "Expected 19 March 2024", completed: false }
-    ]
-  };
-
-  res.status(HttpStatusCodes.OK).json({ success: true, order });
+  res.status(HttpStatusCodes.OK).json({ success: true, order:myOrder });
 };
 
 /** ✅ Update order status */
