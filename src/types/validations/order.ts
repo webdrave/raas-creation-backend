@@ -19,6 +19,10 @@ export const createOrderSchema = z.object({
   userId: z.string().cuid(), // Required user ID
   items: z.array(OrderItemSchema).min(1), // At least one item is required
   total: z.number().min(0), // Total price must be positive
+  isDiscount: z.boolean(),
+  discount: z.number().min(0).optional(),
+  discountCode: z.string().optional(),
+  razorpayOrderId: z.string().optional(),
 });
 
 export const updateOrderStatusSchema = z.object({

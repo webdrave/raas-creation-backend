@@ -352,19 +352,6 @@ const getAllProduct = async (
         },
       },
     }),
-    ...(sizes.length === 0 && {
-      colors: {
-        some: {
-          sizes: {
-            some: {
-              stock: {
-                gt: 0,
-              },
-            },
-          },
-        },
-      },
-    }),
   };
   
 
