@@ -181,13 +181,17 @@ model Order {
   items             OrderItem[] // Join table for order items
   total             Float
   status            OrderStatus
-  ShipRocketOrderId Int?
+  NimbusPostOrderId Int?
   awb               String?
   DeliveryStatus    String?          @default("PENDING")
   etd               String?
   deliveredAt       DateTime?
   paid              Boolean          @default(false)
   fulfillment       OrderFulfillment
+  IsDiscount        Boolean          @default(false)
+  discount          Float?
+  discountCode      String?
+  razorpayOrderId  String?
   addressId         String
   address           Address          @relation(fields: [addressId], references: [id], onDelete: Cascade)
   createdAt         DateTime         @default(now())

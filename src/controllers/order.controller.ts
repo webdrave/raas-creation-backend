@@ -9,55 +9,125 @@ import {
 } from "../types/validations/order.js";
 
 import { prisma } from "../utils/prismaclient.js";
-import { orderProcessed } from "../utils/whatsappclient.js";
+import axios from "axios";
+import FormData from "form-data";
+
 
 /** ✅ Create a new order */
 const createOrder = async (req: Request, res: Response, next: NextFunction) => {
-  
+
   const parsed = createOrderSchema.safeParse(req.body);
   if (!parsed.success) {
     throw new ValidationErr(parsed.error.errors);
   }
-    const { userId, items, total, addressId ,paid} = parsed.data;
+  const { userId, items, total, addressId, paid, isDiscount, discount, discountCode, razorpayOrderId } = parsed.data;
 
 
-    const order = await prisma.order.create({
-      data: {
-        userId,
-        total,
-        addressId,
-        status: OrderStatus.PENDING,
-        paid: paid,
-        fulfillment: OrderFulfillment.PENDING,
-        items: {
-          create: items.map((item) => ({
-            productId: item.productId,
-            productVariantId: item.productVariantId,
-            quantity: item.quantity,
-            priceAtOrder: item.priceAtOrder,
-            color: item.color,
-            productImage: item.productImage,
-            productName: item.productName,
-            size: item.size,
-          })),
-        },
+  if (paid) {
+    if (!razorpayOrderId) {
+      throw new RouteError(HttpStatusCodes.BAD_REQUEST, "Razorpay Order ID is required");
+    }
+    const response = await axios.get(`https://api.razorpay.com/v1/orders/${razorpayOrderId}`, {
+      auth: {
+        username: process.env.RAZORPAY_KEY_ID || '',
+        password: process.env.RAZORPAY_SECRET || ''
+      }
+    });
+    if (response.data.status !== "paid") {
+      throw new RouteError(HttpStatusCodes.BAD_REQUEST, "Order is not paid");
+    }
+  } const order = await prisma.order.create({
+    data: {
+      userId,
+      total,
+      addressId,
+      status: OrderStatus.PENDING,
+      paid: paid,
+      fulfillment: OrderFulfillment.PENDING,
+      IsDiscount: isDiscount ? true : false,
+      discount: discount ?? 0,
+      discountCode: discountCode ?? "",
+      items: {
+        create: items.map((item) => ({
+          productId: item.productId,
+          productVariantId: item.productVariantId,
+          quantity: item.quantity,
+          priceAtOrder: item.priceAtOrder,
+          color: item.color,
+          productImage: item.productImage,
+          productName: item.productName,
+          size: item.size,
+        })),
       },
-      include: { items: true },
-    });
+    },
+    include: { items: true },
+  });
 
-    await prisma.productVariant.updateMany({
-      where: { id: { in: items.map((item) => item.productVariantId) } },
-      data: { stock: { decrement: 1 } },
-    });
+  await prisma.productVariant.updateMany({
+    where: { id: { in: items.map((item) => item.productVariantId) } },
+    data: { stock: { decrement: 1 } },
+  });
 
-    // Get all items details
+  // Create order in Nimbus Post
+  const addressData = await prisma.address.findUnique({
+    where: { id: addressId },
+  });
 
-    await orderProcessed(
-      req.user.name,
-      items[0].productName,
-      "ARVAN",
-      req.user.mobile_no,
-    )
+  if (!addressData) {
+    throw new RouteError(HttpStatusCodes.NOT_FOUND, "Address not found");
+  }
+
+  const formData = new FormData();
+
+  formData.append("order_number", order.id.toString());
+  formData.append("payment_method", order.paid ? "prepaid" : "COD");
+  formData.append("amount", order.total.toString());
+  formData.append("fname", addressData.firstName);
+  formData.append("lname", addressData.lastName ?? "");
+  formData.append("address", addressData.aptNumber + " " + addressData.street);
+  formData.append("phone", addressData.phoneNumber);
+  formData.append("city", addressData.city);
+  formData.append("state", addressData.state);
+  formData.append("country", addressData.country);
+  formData.append("pincode", addressData.zipCode);
+
+  items.forEach((item, index) => {
+    formData.append(`products[${index}][name]`, item.productName + " " + item.size + " " + item.color);
+    formData.append(`products[${index}][qty]`, item.quantity.toString());
+    formData.append(`products[${index}][price]`, item.priceAtOrder.toString());
+    formData.append(`products[${index}][sku]`, item.productVariantId.toString());
+  });
+
+  const data = await axios.post(
+    "https://ship.nimbuspost.com/api/orders/create",
+    formData,
+    {
+      headers: {
+        ...formData.getHeaders(),
+        "NP-API-KEY": process.env.NIMBUS_TOKEN,
+      }
+    }
+  );
+
+  await prisma.order.update({
+    where: { id: order.id },
+    data: { NimbusPostOrderId: data.data.data }
+  })
+
+  await prisma.discount.update({
+    where: { code: discountCode?.toUpperCase() },
+    data: {
+      usageCount: { increment: 1 }
+    }
+  })
+
+  // Send order to Whatsapp
+  // await orderProcessed(
+  //   req.user.name,
+  //   items[0].productName,
+  //   "ARVAN",
+  //   req.user.mobile_no,
+  // )
   res.status(HttpStatusCodes.CREATED).json({ success: true, order });
 };
 /** ✅ Get all orders (Admin) */
@@ -73,7 +143,7 @@ const getAllOrders = async (req: Request, res: Response, next: NextFunction) => 
 
   // Build the where clause
   const whereClause: any = req.user.role === "ADMIN" ? {} : { userId: req.user.id };
-  
+
   // Add search functionality if search term is provided
   if (search) {
     whereClause.OR = [
@@ -85,7 +155,7 @@ const getAllOrders = async (req: Request, res: Response, next: NextFunction) => 
   // Get orders with pagination
   const orders = await prisma.order.findMany({
     where: whereClause,
-    include: { 
+    include: {
       items: true // Include all OrderItem fields directly
     },
     take: limit,
@@ -129,59 +199,59 @@ const getAllOrders = async (req: Request, res: Response, next: NextFunction) => 
 
 /** ✅ Get a single order by ID */
 const getOrderById = async (req: Request, res: Response, next: NextFunction) => {
-    if (!req.user) {
-      throw new RouteError(HttpStatusCodes.UNAUTHORIZED, "Unauthorized");
-    }
-  
-    const { id } = req.params;
-    if (!id) {
-      throw new RouteError(HttpStatusCodes.BAD_REQUEST, "Missing order ID");
-    }
-  
-    const myOrder = await prisma.order.findUnique({
-      where: { id },
-      include: { items: true, address: true },
-    });
+  if (!req.user) {
+    throw new RouteError(HttpStatusCodes.UNAUTHORIZED, "Unauthorized");
+  }
 
-    const order = {
-      status: myOrder?.DeliveryStatus,
-      message: myOrder?.etd ? `Expected Delivery On ${myOrder?.etd.slice(0,10)}` : "Order is being processed",
-      color: "bg-yellow-500",
-      actions: (myOrder?.status === "COMPLETED" || myOrder?.status === "CANCELLED" )? [] : ["Cancel Order"],
-      awb: myOrder?.awb,
-      products: myOrder?.items.map((item) => ({
-        id: item.productId,
-        productName: item.productName,
-        size: item.size,
-        quantity: item.quantity,
-        productColor: item.color,
-        price: item.priceAtOrder,
-        image: item.productImage,
-      })),
-      totalPrice: myOrder?.total,
-      orderDate: myOrder?.createdAt.toISOString().slice(0, 10),
-      orderId: id,
-      paymentMethod: !myOrder?.paid ? "Cash on Delivery" : "RAZORPAY",
-      shippingAddress : {
-        name : myOrder?.address?.firstName,
-        street : myOrder?.address?.street,
-        city : myOrder?.address?.city,
-        state : myOrder?.address?.state,
-        pincode : myOrder?.address?.zipCode,
-        phone : myOrder?.address?.phoneNumber,
-      },
-      timeline: [
-        { status: "Order Placed", date: "5 March 2024, 10:30 AM", completed: true },
-        { status: "Payment Confirmed", date: "5 March 2024, 11:15 AM", completed: true },
-        { status: "Processing", date: "6 March 2024, 9:00 AM", completed: true },
-        { status: "Shipped", date: "7 March 2024, 2:45 PM", completed: true },
-        { status: "Out for Delivery", date: "Expected 19 March 2024", completed: false },
-        { status: "Delivered", date: "Expected 19 March 2024", completed: false }
-      ]
-    };
-  
-    res.status(HttpStatusCodes.OK).json({ success: true, order });
+  const { id } = req.params;
+  if (!id) {
+    throw new RouteError(HttpStatusCodes.BAD_REQUEST, "Missing order ID");
+  }
+
+  const myOrder = await prisma.order.findUnique({
+    where: { id },
+    include: { items: true, address: true },
+  });
+
+  const order = {
+    status: myOrder?.DeliveryStatus,
+    message: myOrder?.etd ? `Expected Delivery On ${myOrder?.etd.slice(0, 10)}` : "Order is being processed",
+    color: "bg-yellow-500",
+    actions: (myOrder?.status === "COMPLETED" || myOrder?.status === "CANCELLED") ? [] : ["Cancel Order"],
+    awb: myOrder?.awb,
+    products: myOrder?.items.map((item) => ({
+      id: item.productId,
+      productName: item.productName,
+      size: item.size,
+      quantity: item.quantity,
+      productColor: item.color,
+      price: item.priceAtOrder,
+      image: item.productImage,
+    })),
+    totalPrice: myOrder?.total,
+    orderDate: myOrder?.createdAt.toISOString().slice(0, 10),
+    orderId: id,
+    paymentMethod: !myOrder?.paid ? "Cash on Delivery" : "RAZORPAY",
+    shippingAddress: {
+      name: myOrder?.address?.firstName,
+      street: myOrder?.address?.street,
+      city: myOrder?.address?.city,
+      state: myOrder?.address?.state,
+      pincode: myOrder?.address?.zipCode,
+      phone: myOrder?.address?.phoneNumber,
+    },
+    timeline: [
+      { status: "Order Placed", date: "5 March 2024, 10:30 AM", completed: true },
+      { status: "Payment Confirmed", date: "5 March 2024, 11:15 AM", completed: true },
+      { status: "Processing", date: "6 March 2024, 9:00 AM", completed: true },
+      { status: "Shipped", date: "7 March 2024, 2:45 PM", completed: true },
+      { status: "Out for Delivery", date: "Expected 19 March 2024", completed: false },
+      { status: "Delivered", date: "Expected 19 March 2024", completed: false }
+    ]
   };
+
+  res.status(HttpStatusCodes.OK).json({ success: true, order });
+};
 
 /** ✅ Update order status */
 const updateOrderStatus = async (req: Request, res: Response, next: NextFunction) => {
@@ -245,18 +315,22 @@ const deleteOrder = async (req: Request, res: Response, next: NextFunction) => {
 const getTax = async (req: Request, res: Response, next: NextFunction) => {
   const tax = await prisma.extraData.findFirst();
   if (!tax) {
-    res.status(HttpStatusCodes.OK).json({ success: false, data: {
-      GSTtax: null,
-      ShiippingCharge: null,
-      CodLimit: null,
-    } });
+    res.status(HttpStatusCodes.OK).json({
+      success: false, data: {
+        GSTtax: null,
+        ShiippingCharge: null,
+        CodLimit: null,
+      }
+    });
     return;
   }
-  res.status(HttpStatusCodes.OK).json({ success: true, data: {
-    GSTtax: tax.GSTtax,
-    ShiippingCharge: tax.ShiippingCharge,
-    CodLimit: tax.CodLimit
-  } });
+  res.status(HttpStatusCodes.OK).json({
+    success: true, data: {
+      GSTtax: tax.GSTtax,
+      ShiippingCharge: tax.ShiippingCharge,
+      CodLimit: tax.CodLimit
+    }
+  });
 };
 const updateTax = async (req: Request, res: Response, next: NextFunction) => {
   const { tax } = req.body;
@@ -284,7 +358,7 @@ const updateTax = async (req: Request, res: Response, next: NextFunction) => {
       },
     });
   }
-  
+
   res.status(HttpStatusCodes.OK).json({ success: true, message: "Tax updated" });
 };
 export default {
