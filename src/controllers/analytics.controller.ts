@@ -52,47 +52,58 @@ const getBesSellers = async (
 ) => {
   const limit = parseInt(req.query.limit as string) || 5;
 
-  const topProducts = await prisma.orderItem.groupBy({
-    by: ["productVariantId"],
+  const BestProducts = await prisma.orderItem.groupBy({
+    by: ["productId"],
     _sum: {
       quantity: true,
       priceAtOrder: true,
     },
   });
-  // Sort and limit
-  const limitedProducts = topProducts
-    .sort((a, b) => (b._sum.quantity || 0) - (a._sum.quantity || 0))
-    .slice(0, limit);
 
-  // Fetch product variants and their products in a single query
-  const productVariants = await prisma.productVariant.findMany({
+  // topProducts.map((item) => {
+  //   item.
+  // })
+
+  const bestProducts = await prisma.product.findMany({
     where: {
-      id: { in: limitedProducts.map((item) => item.productVariantId) },
+      id: {
+        in: BestProducts.map((item) => item.productId),
+      }
     },
     include: {
-      color: {
-        include: {
-          product: {
-            include: {
-              category: true,
-            },
-          },
-          assets: {
-            take: 1,
-          },
-        },
+      assets: true,
+      category: true,
+    }
+  })
+  
+  if (BestProducts.length < limit) {
+    const take = limit - BestProducts.length;
+    const newProducts = await prisma.product.findMany({
+      where: {
+        id: {
+          notIn: BestProducts.map((item) => item.productId),
+        }
       },
-    },
-  });
-  const products = productVariants.map((variant) => {
+      take,
+      include: {
+        assets: true,
+        category: true,
+      }
+    });
+    if (newProducts.length > 0) {
+      bestProducts.push(...newProducts);
+    }
+  }
+
+  const products = bestProducts.map((product) => {
     return {
-      productid: variant.color?.product?.id || "",
-      img: variant.color.assets[0].asset_url, 
-      name: variant.color?.product?.name ,
-      price: variant.color.product.price,
-      slug: variant.color.product.slug,
-      category: variant.color?.product.category.name , // Assuming category field exists
-      discount: variant.color.product.discountPrice, // Assuming discount field exists
+      id: product.id || "",
+      img: product.assets[0].asset_url, 
+      name: product.name, 
+      price: product.price,
+      slug: product.slug,
+      category: product.category.name, 
+      discount: product.discountPrice,
     };
   });
 

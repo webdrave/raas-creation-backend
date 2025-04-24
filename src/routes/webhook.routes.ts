@@ -1,56 +1,112 @@
-import { Router, Request, Response, NextFunction,raw } from "express";
-import { orderDeliverd, orderOutforDelivery, orderShipped } from "../utils/whatsappclient.js";
-import crypto from "crypto";
+import { Request, Response, NextFunction, Router } from "express";
+import { prisma } from "../utils/prismaclient.js";
+import { TimelineEventType } from "@prisma/client";
+
 
 const WebhookRouter = Router();
 
-// Secret for HMAC verification
-const SHARED_SECRET = process.env.WEBHOOK_SECRET || " ";
+const NimbusStatusMap: Record<string, {
+  timelineLabel: string;
+  type: TimelineEventType;
+  fulfillment?: "SHIPPED" | "DELIVERED" | "RETURNED" | "CANCELLED";
+}> = {
+  "booked":            { timelineLabel: "Processing", type: "INFO" },
+  "pending pickup":    { timelineLabel: "Processing", type: "INFO" },
+  "in transit":        { timelineLabel: "Shipped", type: "INFO", fulfillment: "SHIPPED" },
+  "exception":         { timelineLabel: "Delivery Issue", type: "WARNING" },
+  "out for delivery":  { timelineLabel: "Out for Delivery", type: "INFO" },
+  "delivered":         { timelineLabel: "Delivered", type: "SUCCESS", fulfillment: "DELIVERED" },
+  "rto in transit":    { timelineLabel: "RTO In Transit", type: "WARNING", fulfillment: "RETURNED" },
+  "rto delivered":     { timelineLabel: "RTO Delivered", type: "ERROR", fulfillment: "RETURNED" },
+  "cancelled":         { timelineLabel: "Cancelled", type: "ERROR", fulfillment: "CANCELLED" },
+};
 
-// Helper: safely compare hashes
-function verifySignature(rawBody: Buffer, signature: string): boolean {
-  const hmac = crypto.createHmac("sha256", SHARED_SECRET);
-  hmac.update(rawBody);  // Ensure raw body is passed as Buffer
-  const calculatedSignature = hmac.digest("base64");
-
-  try {
-    return crypto.timingSafeEqual(Buffer.from(calculatedSignature), Buffer.from(signature));
-  } catch (err) {
-    console.error("❌ Error comparing signatures:", err);
-    return false;
-  }
-}
-
-// Webhook handler with raw body parsing
-WebhookRouter.post("/", raw({ type: "application/json" }), async (req: Request, res: Response, next: NextFunction) => {
-  const signature = req.header("X-Hmac-SHA256");
-
-  if (!signature) {
-    console.warn("Missing signature");
-    res.status(400).send("Missing signature");
-    return;
-  }
-
-  // `req.body` is a Buffer because of express.raw() middleware
-  const rawBody = req.body as Buffer;
-
-  if (!verifySignature(rawBody, signature)) {
-    console.warn("Invalid signature");
-    res.status(403).send("Invalid signature");
-    return;
-  }
-
-  console.log("✅ Webhook verified");
+WebhookRouter.post("/", async (req: Request, res: Response, next: NextFunction) => {
+  console.log("✅ Webhook Received");
 
   try {
-    // Convert rawBody to string and parse JSON
-    const bodyText = rawBody.toString("utf8");
-    const payload = JSON.parse(bodyText);
+    const payload = req.body;
+    console.log("Webhook Payload:", payload);
 
-    console.log("📦 Payload:", payload);
+    const {
+      order_number,
+      awb_number,
+      status,
+      status_code,
+      message,
+      event_time,
+      location,
+      courier_name,
+      payment_type,
+      edd,
+    } = payload;
 
-    // Example: handle different webhook event types based on the payload
-    // You can call different functions like `orderShipped(payload)` based on the event type
+    // 1. Find the order by AWB number
+    const order = await prisma.order.findUnique({
+      where: { id: order_number },
+    });
+
+    if (!order) {
+      console.warn(`⚠️ Order not found for orderID: ${order_number}`);
+      res.status(404).send("Order not found");
+      return;
+    }
+
+    const mapEntry = NimbusStatusMap[status?.toLowerCase() ?? ""];
+    if (!mapEntry) {
+      console.warn(`⚠️ Unknown status received: ${status}`);
+    }
+
+    if(!order.awb) {
+      await prisma.order.update({
+        where: { id: order.id },
+        data: { awb: awb_number },
+      });
+    }
+
+    // 2. Save the event to NimbusPostEvent
+    await prisma.nimbusPostEvent.create({
+      data: {
+        orderId: order.id,
+        awbNumber: awb_number,
+        status,
+        statusCode: status_code,
+        message,
+        eventTime: new Date(event_time),
+        location,
+        courierName: courier_name,
+        paymentType: payment_type,
+        edd: edd ? new Date(edd) : undefined,
+        rawPayload: payload,
+      },
+    });
+
+    // 3. Add entry to ShipmentTimeline (if status recognized)
+    if (mapEntry) {
+      await prisma.shipmentTimeline.create({
+        data: {
+          orderId: order.id,
+          label: mapEntry.timelineLabel,
+          note: message || undefined,
+          timestamp: new Date(event_time),
+          type: mapEntry.type,
+        },
+      });
+
+      // 4. Optionally update order status/fulfillment
+      await prisma.order.update({
+        where: { id: order.id },
+        data: {
+          fulfillment: mapEntry.fulfillment || order.fulfillment,
+          DeliveryStatus: status.toUpperCase(),
+          deliveredAt:
+            mapEntry.fulfillment === "DELIVERED"
+              ? new Date(event_time)
+              : order.deliveredAt,
+          etd: edd ? edd.toString() : order.etd,
+        },
+      });
+    }
 
     res.status(200).send("Webhook received and processed");
   } catch (err) {
@@ -59,6 +115,7 @@ WebhookRouter.post("/", raw({ type: "application/json" }), async (req: Request, 
   }
 });
 
+export default WebhookRouter;
 // Prisma error handling middleware (for Prisma-related errors)
 // WebhookRouter.use((err: any, req: Request, res: Response, next: NextFunction) => {
 //   if (err instanceof prisma.PrismaClientKnownRequestError) {
@@ -69,8 +126,7 @@ WebhookRouter.post("/", raw({ type: "application/json" }), async (req: Request, 
 //   }
 // });
 
-
-export default WebhookRouter;
+// import { orderDeliverd, orderOutforDelivery, orderShipped } from "../utils/whatsappclient.js";
 
 // try {
 //   const { order_id, awb, etd, current_status } = req.body;

@@ -194,6 +194,8 @@ model Order {
   razorpayOrderId  String?
   addressId         String
   address           Address          @relation(fields: [addressId], references: [id], onDelete: Cascade)
+  events            NimbusPostEvent[]
+  timelineEntries   ShipmentTimeline[]
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt
 }
@@ -221,11 +223,49 @@ enum OrderStatus {
 }
 
 enum OrderFulfillment {
-  PENDING // Added for initial state
+  PENDING 
   SHIPPED
   DELIVERED
+  CANCELLED
   RETURNED
 }
+
+model NimbusPostEvent {
+  id              String     @id @default(cuid())
+  order           Order      @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId         String
+  awbNumber       String?
+  status          String      // e.g. "in transit"
+  statusCode      String?     // e.g. "IT"
+  message         String?
+  eventTime       DateTime
+  location        String?
+  courierName     String?
+  paymentType     String?
+  edd             DateTime?
+  rawPayload      Json        // Store original payload
+  createdAt       DateTime    @default(now())
+}
+
+model ShipmentTimeline {
+  id         String   @id @default(cuid())
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId    String
+  label      String   // "Delivered", "Out for Delivery", etc.
+  note       String?  // Additional detail e.g. "Scheduled for next day"
+  timestamp  DateTime
+  type       TimelineEventType @default(INFO)
+  createdAt  DateTime @default(now())
+  @@index([orderId])
+}
+
+enum TimelineEventType {
+  INFO      // neutral e.g. "Shipment picked up"
+  SUCCESS   // success e.g. "Delivered"
+  WARNING   // e.g. "Delayed"
+  ERROR     // failed delivery, exceptions
+}
+
 
 model Session {
   sessionToken String   @unique

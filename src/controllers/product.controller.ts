@@ -288,15 +288,13 @@ const getAllProduct = async (
 ) => {
   const page = parseInt(req.query.page as string) || 1;
   const limit = parseInt(req.query.limit as string) || 10;
-  const search = (req.query.search as string) || '';
+  const search = (req.query.search as string) || undefined;
   const status = req.query.status as "PUBLISHED" | "DRAFT" | undefined;
-  const minPrice = parseFloat(req.query.min_price as string);
-  const maxPrice = parseFloat(req.query.max_price as string);
-  const sortBy = (req.query.sort_by as string) || 'createdAt';
-  const sortOrder = (req.query.sort_order as string) || 'desc';
-  const color = req.query.color as string;
-  const size = req.query.size as string;
-  const categoryQuery = req.query.category as string;
+  const minPrice = parseFloat(req.query.min_price as string) || undefined;
+  const maxPrice = parseFloat(req.query.max_price as string) || undefined;
+  const color = req.query.color as string || undefined;
+  const size = req.query.size as string || undefined;
+  const categoryQuery = req.query.category as string || undefined;
 
   const categories = categoryQuery ? categoryQuery.split(',') : [];
   const sizes = size ? size.split(',') : [];
@@ -309,10 +307,12 @@ const getAllProduct = async (
   };
 
   const whereClause: any = {
-    OR: [
-      { name: { contains: search, mode: 'insensitive' } },
-      { description: { contains: search, mode: 'insensitive' } },
-    ],
+    ...(search && {
+      OR: [
+        { name: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } },
+      ]
+    }),
     ...(status && { status }),
     ...(Object.keys(priceFilter).length > 0 && { price: priceFilter }),
     ...(categories.length > 0 && {
@@ -361,31 +361,17 @@ const getAllProduct = async (
     where: whereClause,
     include: {
       assets: true,
-      colors: {
-        include: {
-          assets: true,
-          sizes: true,
-        },
-      },
       tags: true,
-    },
-    orderBy: {
-      [sortBy]: sortOrder,
     },
     skip,
     take: limit,
   });
 
-  const transformedProducts = products.map((product) => ({
-    ...product,
-    tags: product.tags.map((tag) => tag.tag),
-  }));
-
   const totalPages = Math.ceil(totalCount / limit);
 
   res.status(200).json({
     success: true,
-    products: transformedProducts,
+    products: products,
     pagination: {
       totalPages,
       currentPage: page,
