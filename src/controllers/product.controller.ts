@@ -309,10 +309,12 @@ const getAllProduct = async (
   };
 
   const whereClause: any = {
-    OR: [
-      { name: { contains: search, mode: 'insensitive' } },
-      { description: { contains: search, mode: 'insensitive' } },
-    ],
+    ...(search && {
+      OR: [
+        { name: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } },
+      ]
+    }),
     ...(status && { status }),
     ...(Object.keys(priceFilter).length > 0 && { price: priceFilter }),
     ...(categories.length > 0 && {

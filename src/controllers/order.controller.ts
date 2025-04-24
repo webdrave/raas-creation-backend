@@ -114,12 +114,14 @@ const createOrder = async (req: Request, res: Response, next: NextFunction) => {
     data: { NimbusPostOrderId: data.data.data }
   })
 
-  await prisma.discount.update({
-    where: { code: discountCode?.toUpperCase() },
-    data: {
-      usageCount: { increment: 1 }
-    }
-  })
+  if (isDiscount) {
+    await prisma.discount.update({
+      where: { code: discountCode?.toUpperCase() },
+      data: {
+        usageCount: { increment: 1 }
+      }
+    })
+  }
 
   // Send order to Whatsapp
   // await orderProcessed(
@@ -213,7 +215,7 @@ const getOrderById = async (req: Request, res: Response, next: NextFunction) => 
     include: { items: true, address: true },
   });
 
-  res.status(HttpStatusCodes.OK).json({ success: true, order:myOrder });
+  res.status(HttpStatusCodes.OK).json({ success: true, order: myOrder });
 };
 
 /** ✅ Update order status */

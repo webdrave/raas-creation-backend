@@ -142,9 +142,33 @@ const getProductList = async (req: Request, res: Response) => {
     res.status(500).json({ error: "Internal Server Error" });
   }
 };
+
+const getIsproductInWishlist = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.user;
+    const { productId } = req.params;
+    if (!id) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+    const wishlist = await prisma.wishlist.findFirst(
+      { where: { userId: id, productId: productId } 
+    });
+    if (!wishlist) {
+      res.status(404).json({ error: "Product not found" });
+      return;
+    }
+    res.status(200).json({ success: true, data: wishlist });
+  }
+  catch (error) {
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
 export const wishlistController = {
   getAll,
   addToWishlist,
   deletetoWishlist,
   getProductList,
+  getIsproductInWishlist
 };
