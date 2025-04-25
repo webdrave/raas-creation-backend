@@ -27,8 +27,8 @@ const getOverview = async (req: Request, res: Response, next: NextFunction) => {
     }
 
     for (const stock of stockMap.values()) {
-        if (stock > 10) restockAlerts++;
-        else if (stock <= 10) lowStockItems++;
+        if (stock > 3) restockAlerts++;
+        else if (stock <= 3) lowStockItems++;
 
         if (stock > 0) outOfStock--;
     }
@@ -90,7 +90,7 @@ const getInventory = async (req: Request, res: Response, next: NextFunction) => 
                 id: product.id,
                 name: product.name,
                 inStock: stockMap.get(product.id) || 0,
-                lowStockThreshold: 10, 
+                lowStockThreshold: 3, 
             })),
         };
 

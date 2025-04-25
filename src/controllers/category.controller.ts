@@ -123,6 +123,11 @@ const getCategory = async (req: Request, res: Response, next: NextFunction) => {
 const getCategoryDetails = async (req: Request, res: Response, next: NextFunction) => {
     
     const categories  = await prisma.category.findMany({
+        where: {
+            Product: {
+                some: {}
+            }
+        },
         include: {
             Product: {
                 take: 1,

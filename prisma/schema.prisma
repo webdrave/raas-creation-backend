@@ -181,6 +181,7 @@ model Order {
   items             OrderItem[] // Join table for order items
   total             Float
   status            OrderStatus
+  orderId           Int?            @unique @default(autoincrement())
   NimbusPostOrderId Int?
   awb               String?
   DeliveryStatus    String?          @default("PENDING")

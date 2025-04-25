@@ -150,7 +150,8 @@ const getAllOrders = async (req: Request, res: Response, next: NextFunction) => 
   if (search) {
     whereClause.OR = [
       { id: { contains: search, mode: 'insensitive' } },
-      { userId: { contains: search, mode: 'insensitive' } }
+      { userId: { contains: search, mode: 'insensitive' } },
+      { orderId: { contains: search, mode: 'insensitive' } },
     ];
   }
 
