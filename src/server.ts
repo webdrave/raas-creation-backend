@@ -133,7 +133,6 @@ app.use("/api/wishlists", wishlistRoutes);
                                 Export default
 ******************************************************************************/
 
-
 // const seedSampleOrders = async () => {
 //   try {
 //     // 1. Create a sample user (or find existing)
