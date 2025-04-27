@@ -327,6 +327,65 @@ const updateTax = async (req: Request, res: Response, next: NextFunction) => {
 
   res.status(HttpStatusCodes.OK).json({ success: true, message: "Tax updated" });
 };
+
+const cancelOrder = async (req: Request, res: Response, next: NextFunction) => {
+  const { id } = req.params;
+  if (!id) {
+    throw new RouteError(HttpStatusCodes.BAD_REQUEST, "Missing order id");
+  }
+  const user = req.user;
+  if (!user) {
+    throw new RouteError(HttpStatusCodes.UNAUTHORIZED, "Unauthorized");
+  }
+
+  const order = await prisma.order.findUnique({
+    where: { id, userId: user.id },
+  });
+
+  if (!order) {
+    throw new RouteError(HttpStatusCodes.NOT_FOUND, "Order not found");
+  }
+  if (order.fulfillment === "CANCELLED") {
+    throw new RouteError(HttpStatusCodes.BAD_REQUEST, "Order already cancelled");
+  }
+
+  if (order.fulfillment === "DELIVERED") {
+    throw new RouteError(HttpStatusCodes.BAD_REQUEST, "Order already fulfilled");
+  }
+
+  // cancel order from nimbus post
+
+  const formData = new FormData();
+  formData.append("id", order.NimbusPostOrderId);
+
+  const data = await axios.post(
+    "https://api.nimbuspost.com/api/v1/orders/cancel",
+    formData,
+    {
+      headers: {
+        ...formData.getHeaders(),
+        "NP-API-KEY": process.env.NIMBUS_TOKEN,
+      }
+    }
+  );
+
+  if (data.status !== 200) {
+    throw new RouteError(HttpStatusCodes.INTERNAL_SERVER_ERROR, "Failed to cancel order");
+  }
+
+
+  await prisma.order.update({
+    where: { id },
+    data: {
+      status: "CANCELLED",
+      fulfillment: "CANCELLED",
+    },
+  });
+
+  res.status(HttpStatusCodes.OK).json({ success: true, message: "Order cancelled" });
+};
+
+
 export default {
   createOrder,
   getAllOrders,
@@ -336,4 +395,5 @@ export default {
   deleteOrder,
   getTax,
   updateTax,
+  cancelOrder,
 };

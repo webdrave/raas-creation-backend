@@ -100,7 +100,7 @@ export const globalErrorHandler = (
 declare global {
   namespace Express {
     interface Request {
-      user: {id:string , role: string,name:string,mobile_no:string}; // Add a `session` property to the Request interface
+      user: {id:string , role: string,name:string,mobile_no:string,image:string|null}; // Add a `session` property to the Request interface
     }
   }
 }
@@ -163,7 +163,8 @@ export const authenticateJWT = async (
       id: user.id,
       role: user.role,
       name: user.name,
-      mobile_no: user.mobile_no
+      mobile_no: user.mobile_no,
+      image: user.image
     };
 
     next();
