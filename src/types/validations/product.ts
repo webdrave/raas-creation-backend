@@ -27,6 +27,7 @@ export const addProductSchema = z.object({
 // id: string | undefined, name: string, assets: { url: string; type: string }[]
 export const updateColorSchema = z.object({
   name: z.string().min(1, "Color name is required"),
+  colorHex: z.string().min(1, "Color hex is required").optional(),
   assets: z.array(
     z.object({
       url: z.string().url("Invalid asset URL"),
@@ -40,6 +41,7 @@ export const updateColorSchema = z.object({
 export const addColorSchema = z.object({
   productId: z.string().cuid("Invalid product ID"),
   color: z.string().min(1, "Color is required"),
+  colorHex: z.string().min(1, "Color hex is required"),
   assets: z.array(
     z.object({
       url: z.string().url("Invalid asset URL"),

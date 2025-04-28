@@ -4,15 +4,11 @@ import HttpStatusCodes from "../common/httpstatuscode.js";
 
 const createreview = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-        // Validate user object
-        // if (!req.user) {
-        //     res.status(HttpStatusCodes.UNAUTHORIZED).json({ message: "Unauthorized user" });
-        //     return;
-        // }
-
-        const { title, description, rating } = req.body;
+        const { title, description, rating,image } = req.body;
         const productIdFromParams = req.params.productId;  
         console.log("productIdFromParams", productIdFromParams);
+
+        console.log(title, description, rating);
 
         // Validate required fields
         if (!title || !description || !rating || !productIdFromParams) {
@@ -26,24 +22,15 @@ const createreview = async (req: Request, res: Response, next: NextFunction): Pr
             return;
         }
 
-        // Ensure product exists before creating the product rating
-        const productExists = await prisma.product.findUnique({
-            where: { id: productIdFromParams }
-        });
-
-        if (!productExists) {
-            res.status(HttpStatusCodes.NOT_FOUND).json({ message: "Product not found" });
-            return;
-        }
-
-        // Create testimonial
+        // Create review
         const productrating = await prisma.productRating.create({
             data: {
                 title,
                 description,
+                image: req.user.image,
                 rating,
                 productId: productIdFromParams,
-                // userId: req.user.id 
+                userId: req.user.id 
             }
         });
 
@@ -61,36 +48,9 @@ const createreview = async (req: Request, res: Response, next: NextFunction): Pr
     }
 };
 
-
-
-// const getTestimonialsByProductId = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-//     try {
-//         const { productId } = req.query; // URL se productId le rahe hain
-
-//         const testimonials = await prisma.productRating.findMany({
-//             where: {
-//                 productId: productId ? String(productId) : undefined,
-//             },
-//             orderBy: {
-//                 createdAt: "desc"
-//             }
-//         });
-
-//         res.status(200).json({
-//             testimonials
-//         });
-
-//     } catch (error) {
-//         console.error("Error getting testimonials:", error);
-//         res.status(500).json({
-//             message: "Internal Server Error",
-//             error: error instanceof Error ? error.message : "Unknown error"
-//         });
-//     }
-// };
 const getReviewsByProductId = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-        const productId = req.params.productId;  
+        const productId = req.query.productId as string;  
 
         if (!productId) {
             res.status(400).json({ message: "Product ID is required" });
@@ -98,11 +58,10 @@ const getReviewsByProductId = async (req: Request, res: Response, next: NextFunc
         }
 
         const reviews = await prisma.productRating.findMany({
-            where: { productId: productId },  // Sirf usi product ke reviews lao
+            where: { productId: productId },  
             orderBy: { createdAt: "desc" }
         });
         
-
         res.status(200).json({ reviews });
 
     } catch (error) {
@@ -111,8 +70,84 @@ const getReviewsByProductId = async (req: Request, res: Response, next: NextFunc
     }
 };
 
+const updateReview = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+        const { reviewId:id } = req.params;
+        const review = req.body;
+
+        const userId = req.user.id;
+        
+        if(!userId) {
+            res.status(403).json({ message: "You are not authorized to update this review" });
+            return;
+        }
+
+        const reviewToUpdate = await prisma.productRating.findUnique({
+            where: { id }
+        });
+
+        if(!reviewToUpdate) {
+            res.status(404).json({ message: "Review not found" });
+            return;
+        }
+
+        if(reviewToUpdate.userId !== userId) {
+            res.status(403).json({ message: "You are not authorized to update this review" });
+            return;
+        }
+
+        const updatedReview = await prisma.productRating.update({
+            where: { id },
+            data: review
+        });
+
+        res.status(200).json(updatedReview);
+    } catch (error) {
+        console.error("Error updating review:", error);
+        res.status(500).json({ message: "Internal Server Error", error: error instanceof Error ? error.message : "Unknown error" });
+    }
+};
+
+const deleteReview = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+        const { reviewId:id } = req.params;
+
+        const userId = req.user.id;
+        
+        if(!userId) {
+            res.status(403).json({ message: "You are not authorized to update this review" });
+            return;
+        }
+
+        // Check if the user is the owner of the review
+        const reviewToUpdate = await prisma.productRating.findUnique({
+            where: { id }
+        });
+
+        if(!reviewToUpdate) {
+            res.status(404).json({ message: "Review not found" });
+            return;
+        }
+
+        if(reviewToUpdate.userId !== userId) {
+            res.status(403).json({ message: "You are not authorized to update this review" });
+            return;
+        }
+
+        await prisma.productRating.delete({
+            where: { id }
+        });
+
+        res.status(204).send();
+    } catch (error) {
+        console.error("Error deleting review:", error);
+        res.status(500).json({ message: "Internal Server Error", error: error instanceof Error ? error.message : "Unknown error" });
+    }
+};
 
 export default {
     createreview,
-    getReviewsByProductId
+    getReviewsByProductId,
+    updateReview,
+    deleteReview
 };

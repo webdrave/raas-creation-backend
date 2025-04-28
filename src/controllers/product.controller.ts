@@ -84,7 +84,7 @@ const addColor = async (req: Request, res: Response, next: NextFunction) => {
   if (!parsed.success) {
     throw new ValidationErr(parsed.error.errors);
   }
-  const { productId, color, assets,sizes } = parsed.data;
+  const { productId, color, assets,sizes, colorHex } = parsed.data;
 
   const product = await prisma.product.findUnique({ where: { id: productId } });
   if (!product) {
@@ -94,6 +94,7 @@ const addColor = async (req: Request, res: Response, next: NextFunction) => {
   const productColor = await prisma.productColor.create({
     data: {
       color,
+      colorHex,
       productId,
       assets: {
         create:
@@ -149,7 +150,7 @@ const updateColor = async (req: Request, res: Response, next: NextFunction) => {
   if (!parsed.success) {
     throw new ValidationErr(parsed.error.errors);
   }
-  const { name, assets } = parsed.data;
+  const { name, assets, colorHex } = parsed.data;
 
   // First, delete all existing assets and sizes for this color
   const productColor = await prisma.$transaction([
@@ -160,6 +161,7 @@ const updateColor = async (req: Request, res: Response, next: NextFunction) => {
       where: { id },
       data: {
         color:name,
+        colorHex,
         assets: {
           create:
             assets?.map((asset: { url: string; type: AssetType }) => ({
@@ -563,6 +565,18 @@ const getOverview = async (req: Request, res: Response, next: NextFunction) => {
   }
 };
 
+const getColors = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+      const colors = await prisma.productColor.findMany({
+          distinct: ['colorHex']
+      });
+      res.status(200).json(colors);
+  } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Error fetching product colors" });
+  }
+};
+
 export default {
   addProduct,
   addColor,
@@ -578,5 +592,6 @@ export default {
   deleteColor,
   deleteVariant,
   getOverview,
-  getSlugProduct
+  getSlugProduct,
+  getColors,
 };

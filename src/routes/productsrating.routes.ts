@@ -5,12 +5,18 @@ import { authenticateJWT } from "../middleware/globalerrorhandler.js";
 const router = Router();
 
 
-// 📦 Create testimonial
+// 📦 Create Reviews
 
 router.post("/:productId",authenticateJWT, productreviewController.createreview);
 
-// 📦 Get all testimonial by product id
-router.get("/:productId", productreviewController.getReviewsByProductId);
+// 📦 Get all reviews
+router.get("/", productreviewController.getReviewsByProductId);
+
+// 📦 Update review
+router.put("/:reviewId", authenticateJWT, productreviewController.updateReview);
+
+// 📦 Delete review
+router.delete("/:reviewId", authenticateJWT, productreviewController.deleteReview);
 
 
 export default router;

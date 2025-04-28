@@ -119,10 +119,36 @@ const getCategory = async (req: Request, res: Response, next: NextFunction) => {
 
     res.status(HttpStatusCodes.OK).json({ success: true, category: formatted });
 };
+
+const getCategoryDetails = async (req: Request, res: Response, next: NextFunction) => {
+    
+    const categories  = await prisma.category.findMany({
+        where: {
+            Product: {
+                some: {}
+            }
+        },
+        include: {
+            Product: {
+                take: 1,
+                include: {
+                    assets: {
+                        take:1,
+                    }
+                }
+            }
+        }
+    });
+
+    res.status(HttpStatusCodes.OK).json({ success: true, categories });
+};
+
+
 export default {
     addCategory,
     updateCategory,
     deleteCategory,
     getAllCategories,
+    getCategoryDetails,
     getCategory,
 };

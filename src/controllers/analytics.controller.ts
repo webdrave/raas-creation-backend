@@ -82,7 +82,8 @@ const getBesSellers = async (
       where: {
         id: {
           notIn: BestProducts.map((item) => item.productId),
-        }
+        },
+        status: "PUBLISHED"
       },
       take,
       include: {

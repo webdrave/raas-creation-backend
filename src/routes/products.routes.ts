@@ -37,6 +37,8 @@ router.delete("/variant/:id",authenticateJWT,isAdmin, productController.deleteVa
 // Delete an image
 router.delete("/asset/:id",authenticateJWT,isAdmin, productController.deleteAsset);
 
+router.get("/colors", productController.getColors);
+
 router.get("/overview",authenticateJWT,isAdmin, productController.getOverview);
 
 // Get product details by ID

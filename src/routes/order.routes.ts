@@ -26,6 +26,6 @@ router.patch("/:id/fulfillment",authenticateJWT,isAdmin, orderController.updateF
 // ❌ Delete an order (Admin only)
 router.delete("/:id",authenticateJWT,isAdmin, orderController.deleteOrder);
 
-
+router.post("/cancel/:id",authenticateJWT, orderController.cancelOrder);
 
 export default router;
