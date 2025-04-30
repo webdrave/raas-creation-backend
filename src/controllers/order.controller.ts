@@ -63,11 +63,6 @@ const createOrder = async (req: Request, res: Response, next: NextFunction) => {
     include: { items: true },
   });
 
-  await prisma.productVariant.updateMany({
-    where: { id: { in: items.map((item) => item.productVariantId) } },
-    data: { stock: { decrement: 1 } },
-  });
-
   // Create order in Nimbus Post
   const addressData = await prisma.address.findUnique({
     where: { id: addressId },
@@ -123,6 +118,11 @@ const createOrder = async (req: Request, res: Response, next: NextFunction) => {
     })
   }
 
+  const result = await prisma.productVariant.updateMany({
+    where: { id: { in: items.map((item) => item.productVariantId) } },
+    data: { stock: { decrement: 1 } },
+  });
+  
   // Send order to Whatsapp
   // await orderProcessed(
   //   req.user.name,

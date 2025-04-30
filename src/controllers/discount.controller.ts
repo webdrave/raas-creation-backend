@@ -32,7 +32,6 @@ const getAllDiscounts = async (req: Request, res: Response, next: NextFunction) 
 const addDiscount = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const {
-      code,
       type,
       value,
       minPurchase,
@@ -40,6 +39,8 @@ const addDiscount = async (req: Request, res: Response, next: NextFunction) => {
       startDate,
       endDate,
     } = req.body
+
+    const code = req.body.code.toUpperCase();
 
     const existing = await prisma.discount.findUnique({ where: { code } })
     if (existing) {

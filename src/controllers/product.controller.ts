@@ -315,7 +315,7 @@ const getAllProduct = async (
         { description: { contains: search, mode: 'insensitive' } },
       ]
     }),
-    ...(status && { status }),
+    ...(status && { status: status }),
     ...(Object.keys(priceFilter).length > 0 && { price: priceFilter }),
     ...(categories.length > 0 && {
       category_id: {

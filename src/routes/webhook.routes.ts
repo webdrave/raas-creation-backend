@@ -64,6 +64,13 @@ WebhookRouter.post("/", async (req: Request, res: Response, next: NextFunction) 
       });
     }
 
+    if(!order.etd) {
+      await prisma.order.update({
+        where: { id: order.id },
+        data: { etd: edd },
+      });
+    }
+
     // 2. Save the event to NimbusPostEvent
     await prisma.nimbusPostEvent.create({
       data: {

@@ -46,7 +46,7 @@ export async function sendOtp(otp: string, recipientNo: string) {
       type: "template",
       template: {
         name: "auth_verify",
-        language: { code: "en_US" },
+        language: { code: "en" },
         components: components,
       },
     };
@@ -70,7 +70,7 @@ export async function sendOtp(otp: string, recipientNo: string) {
 export async function orderProcessed(
   name: string,
   item: string,
-  regards: string,
+  order_id: string,
   recipientNo: string
 ) {
   try {
@@ -80,15 +80,16 @@ export async function orderProcessed(
       to: recipientNo,
       type: "template",
       template: {
-        name: "order_processed",
-        language: { code: "en" },
+        name: "order_management_1",
+        language: { code: "en_US" },
         components: [
           {
             type: "body",
             parameters: [
               { type: "text", text: name },
+              {type: "text", text: "purchase" },
+              { type: "text", text: order_id },
               { type: "text", text: item },
-              { type: "text", text: regards },
             ],
           },
         ],
@@ -111,8 +112,8 @@ export async function orderProcessed(
 export async function orderShipped(
   name: string,
   item: string,
-  regards: string,
-  tracking_link: string,
+  tracking_id: string,
+  edd: string,
   recipientNo: string
 ) {
   try {
@@ -122,28 +123,17 @@ export async function orderShipped(
       to: recipientNo,
       type: "template",
       template: {
-        name: "order_shipped",
-        language: { code: "en" },
+        name: "shipment_confirmation_2",
+        language: { code: "en_US" },
         components: [
           {
             type: "body",
             parameters: [
               { type: "text", text: name },
               { type: "text", text: item },
-              { type: "text", text: regards },
+              { type: "text", text: tracking_id },
+              { type: "text", text: edd },
             ],
-          },
-          {
-            type: "button",
-            sub_type: "url",
-            index: "0",
-            parameters: [
-              {
-                type: "text",
-                text: `{${tracking_link}}`,
-              },
-            ],
-          
           }
         ],
       },
