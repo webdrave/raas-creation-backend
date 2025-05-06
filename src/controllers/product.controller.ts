@@ -316,7 +316,7 @@ const getAllProduct = async (
       ]
     }),
     ...(status && { status: status }),
-    ...(Object.keys(priceFilter).length > 0 && { price: priceFilter }),
+    ...(Object.keys(priceFilter).length > 0 && { discountPrice: priceFilter }),
     ...(categories.length > 0 && {
       category_id: {
         in: categories,

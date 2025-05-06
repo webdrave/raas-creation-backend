@@ -11,6 +11,7 @@ import {
 import { prisma } from "../utils/prismaclient.js";
 import axios from "axios";
 import FormData from "form-data";
+import { orderProcessed } from "../utils/whatsappclient.js";
 
 
 /** ✅ Create a new order */
@@ -124,12 +125,12 @@ const createOrder = async (req: Request, res: Response, next: NextFunction) => {
   });
   
   // Send order to Whatsapp
-  // await orderProcessed(
-  //   req.user.name,
-  //   items[0].productName,
-  //   "ARVAN",
-  //   req.user.mobile_no,
-  // )
+  await orderProcessed(
+    req.user?.name,
+    req.user?.mobile_no,
+    "# " + order.orderId,
+    items.map((item) => item.productName).join(", "),
+  );
   res.status(HttpStatusCodes.CREATED).json({ success: true, order });
 };
 /** ✅ Get all orders (Admin) */
