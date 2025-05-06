@@ -84,7 +84,7 @@ const createOrder = async (req: Request, res: Response, next: NextFunction) => {
   formData.append("payment_method", order.paid ? "prepaid" : "COD");
   formData.append("amount", order.total.toString());
   formData.append("fname", addressData.firstName);
-  formData.append("lname", addressData.lastName ?? "");
+  formData.append("lname", addressData.lastName ?? "N/A");
   formData.append("address", addressData.aptNumber + " " + addressData.street);
   formData.append("phone", addressData.phoneNumber);
   formData.append("city", addressData.city);
