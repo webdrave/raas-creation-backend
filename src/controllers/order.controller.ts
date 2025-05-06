@@ -124,7 +124,7 @@ const createOrder = async (req: Request, res: Response, next: NextFunction) => {
       where: { id: order.id },
       data: { NimbusPostOrderId: data.data.data }
     })
-  } catch (error) {
+  } catch (error : any) {
     console.error("Nimbus Post API Error:", error.response?.data || error.message);
     console.error("Nimbus Post API Response:", error.response);
     throw new RouteError(HttpStatusCodes.BAD_REQUEST, "Failed to create Nimbus Post order");
