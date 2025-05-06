@@ -83,6 +83,7 @@ import productPerformanceRouter from './routes/productperformance.routes.js'
 import discountRouter from './routes/discount.routes.js'
 import wishlistRoutes from './routes/wishlist.routes.js'
 import { prisma } from './utils/prismaclient.js';
+import { orderProcessed } from './utils/whatsappclient.js';
 app.use(globalErrorHandler);
 app.use("/api/products", UserRouter);
 // app.use(Paths.Base, BaseRouter);

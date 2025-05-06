@@ -84,9 +84,8 @@ const createOrder = async (req: Request, res: Response, next: NextFunction) => {
   formData.append("payment_method", order.paid ? "prepaid" : "COD");
   formData.append("amount", order.total.toString());
   formData.append("fname", addressData.firstName);
-  formData.append("lname", addressData.lastName ?? "N/A");
-  formData.append("address", addressData.aptNumber + " " + addressData.street);
-  formData.append("phone", addressData.phoneNumber);
+  formData.append("lname", addressData.lastName === "" ? "N/A" : (addressData.lastName ?? "N/A"));
+  formData.append("address", addressData.aptNumber + " " + addressData.street);  formData.append("phone", addressData.phoneNumber);
   formData.append("city", addressData.city);
   formData.append("state", addressData.state);
   formData.append("country", addressData.country);
@@ -148,9 +147,9 @@ const createOrder = async (req: Request, res: Response, next: NextFunction) => {
   // Send order to Whatsapp
   await orderProcessed(
     req.user?.name,
-    req.user?.mobile_no,
-    "# " + order.orderId,
     items.map((item) => item.productName).join(", "),
+    "# " + order.orderId,
+    req.user?.mobile_no,
   );
   res.status(HttpStatusCodes.CREATED).json({ success: true, order });
 };
