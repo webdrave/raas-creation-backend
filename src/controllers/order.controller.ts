@@ -72,63 +72,64 @@ const createOrder = async (req: Request, res: Response, next: NextFunction) => {
   if (!addressData) {
     throw new RouteError(HttpStatusCodes.NOT_FOUND, "Address not found");
   }
-    console.log("Creating Nimbus Post order...");
-    const formData = new FormData();
+  console.log("Creating Nimbus Post order...");
+  const formData = new FormData();
 
-    console.log("Order ID:", order.id);
-    console.log("Payment Method:", order.paid ? "prepaid" : "COD");
-    console.log("Total Amount:", order.total);
-    console.log("Address Data:", addressData);
+  console.log("Order ID:", order.id);
+  console.log("Payment Method:", order.paid ? "prepaid" : "COD");
+  console.log("Total Amount:", order.total);
+  console.log("Address Data:", addressData);
 
-    formData.append("order_number", order.id.toString());
-    formData.append("payment_method", order.paid ? "prepaid" : "COD");
-    formData.append("amount", order.total.toString());
-    formData.append("fname", addressData.firstName);
-    formData.append("lname", addressData.lastName ?? "");
-    formData.append("address", addressData.aptNumber + " " + addressData.street);
-    formData.append("phone", addressData.phoneNumber);
-    formData.append("city", addressData.city);
-    formData.append("state", addressData.state);
-    formData.append("country", addressData.country);
-    formData.append("pincode", addressData.zipCode);
+  formData.append("order_number", order.id.toString());
+  formData.append("payment_method", order.paid ? "prepaid" : "COD");
+  formData.append("amount", order.total.toString());
+  formData.append("fname", addressData.firstName);
+  formData.append("lname", addressData.lastName ?? "");
+  formData.append("address", addressData.aptNumber + " " + addressData.street);
+  formData.append("phone", addressData.phoneNumber);
+  formData.append("city", addressData.city);
+  formData.append("state", addressData.state);
+  formData.append("country", addressData.country);
+  formData.append("pincode", addressData.zipCode);
 
-    console.log("Form Data after adding address details:", formData);
+  console.log("Form Data after adding address details:", formData);
 
-    items.forEach((item, index) => {
-      console.log(`Item ${index + 1}:`, item);
-      formData.append(`products[${index}][name]`, item.productName + " " + item.size + " " + item.color);
-      formData.append(`products[${index}][qty]`, item.quantity.toString());
-      formData.append(`products[${index}][price]`, item.priceAtOrder.toString());
-      formData.append(`products[${index}][sku]`, order.id.toString());
-    });
+  items.forEach((item, index) => {
+    console.log(`Item ${index + 1}:`, item);
+    formData.append(`products[${index}][name]`, item.productName + " " + item.size + " " + item.color);
+    formData.append(`products[${index}][qty]`, item.quantity.toString());
+    formData.append(`products[${index}][price]`, item.priceAtOrder.toString());
+    formData.append(`products[${index}][sku]`, order.id.toString());
+  });
 
-    console.log("Complete Form Data:", formData);
-    console.log("Nimbus API URL:", "https://ship.nimbuspost.com/api/orders/create");
-    console.log("Nimbus Token:", process.env.NIMBUS_TOKEN);
-    console.log("Form Headers:", formData.getHeaders());
+  console.log("Complete Form Data:", formData);
+  console.log("Nimbus API URL:", "https://ship.nimbuspost.com/api/orders/create");
+  console.log("Nimbus Token:", process.env.NIMBUS_TOKEN);
+  console.log("Form Headers:", formData.getHeaders());
 
-    try {
-      const data = await axios.post(
-        "https://ship.nimbuspost.com/api/orders/create",
-        formData,
-        {
-          headers: {
-            ...formData.getHeaders(),
-            "NP-API-KEY": process.env.NIMBUS_TOKEN,
-            "Content-Type": "multipart/form-data",
-          }
+  try {
+    const data = await axios.post(
+      "https://ship.nimbuspost.com/api/orders/create",
+      formData,
+      {
+        headers: {
+          ...formData.getHeaders(),
+          "NP-API-KEY": process.env.NIMBUS_TOKEN,
+          "Content-Type": "multipart/form-data",
         }
-      );
-    } catch (error) {
-      console.error("Nimbus Post API Error:", error.response?.data || error.message);
-      console.error("Nimbus Post API Response:", error.response);
-      throw new RouteError(HttpStatusCodes.BAD_REQUEST, "Failed to create Nimbus Post order");
-    }
+      }
+    );
     console.log("Nimbus API Response:", data);
-  await prisma.order.update({
-    where: { id: order.id },
-    data: { NimbusPostOrderId: data.data.data }
-  })
+    await prisma.order.update({
+      where: { id: order.id },
+      data: { NimbusPostOrderId: data.data.data }
+    })
+  } catch (error) {
+    console.error("Nimbus Post API Error:", error.response?.data || error.message);
+    console.error("Nimbus Post API Response:", error.response);
+    throw new RouteError(HttpStatusCodes.BAD_REQUEST, "Failed to create Nimbus Post order");
+  }
+
 
   if (isDiscount) {
     await prisma.discount.update({
@@ -143,7 +144,7 @@ const createOrder = async (req: Request, res: Response, next: NextFunction) => {
     where: { id: { in: items.map((item) => item.productVariantId) } },
     data: { stock: { decrement: 1 } },
   });
-  
+
   // Send order to Whatsapp
   await orderProcessed(
     req.user?.name,
