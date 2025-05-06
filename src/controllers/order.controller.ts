@@ -107,17 +107,23 @@ const createOrder = async (req: Request, res: Response, next: NextFunction) => {
     console.log("Nimbus Token:", process.env.NIMBUS_TOKEN);
     console.log("Form Headers:", formData.getHeaders());
 
-    const data = await axios.post(
-      "https://ship.nimbuspost.com/api/orders/create",
-      formData,
-      {
-        headers: {
-          ...formData.getHeaders(),
-          "NP-API-KEY": process.env.NIMBUS_TOKEN,
+    try {
+      const data = await axios.post(
+        "https://ship.nimbuspost.com/api/orders/create",
+        formData,
+        {
+          headers: {
+            ...formData.getHeaders(),
+            "NP-API-KEY": process.env.NIMBUS_TOKEN,
+            "Content-Type": "multipart/form-data",
+          }
         }
-      }
-    );
-
+      );
+    } catch (error) {
+      console.error("Nimbus Post API Error:", error.response?.data || error.message);
+      console.error("Nimbus Post API Response:", error.response);
+      throw new RouteError(HttpStatusCodes.BAD_REQUEST, "Failed to create Nimbus Post order");
+    }
     console.log("Nimbus API Response:", data);
   await prisma.order.update({
     where: { id: order.id },
