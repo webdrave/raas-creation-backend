@@ -6,7 +6,7 @@ const getTopProducts = async (req: Request, res: Response, next: NextFunction) =
   const limit = parseInt(req.query.limit as string) || 5;
 
   const topProducts = await prisma.orderItem.groupBy({
-    by: ["productVariantId"],
+    by: ["productId"],
     _sum: {
       quantity: true,
       priceAtOrder: true,
@@ -21,20 +21,13 @@ const getTopProducts = async (req: Request, res: Response, next: NextFunction) =
 
   const products = await Promise.all(
     limitedProducts.map(async (item) => {
-      const productVariant = await prisma.productVariant.findUnique({
-        where: { id: item.productVariantId },
-        include: {
-          color: {
-            include: {
-              product: true,
-            },
-          },
-        },
+      const product = await prisma.product.findUnique({
+        where: { id: item.productId },
       });
 
       return {
-        id: productVariant?.color?.product?.id || "",
-        name: productVariant?.color?.product?.name || "Unknown Product",
+        id: product?.id || "",
+        name: product?.name || "Unknown Product",
         sales: item._sum.quantity || 0,
         revenue: item._sum.priceAtOrder || 0,
       };
