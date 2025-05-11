@@ -154,6 +154,7 @@ const getCustomer = async (req: Request, res: Response, next: NextFunction) => {
       mobile_no: true,
       email: true,
       image: true,
+      isPhoneNoVerified: true,
     }
   })
 
@@ -330,11 +331,6 @@ const getOtpByJwt = async (
   if (!data) {
     throw new RouteError(HttpStatusCodes.UNAUTHORIZED, "Invalid JWT");
   }
-
-
-
-
-
 
   const findOtp = await prisma.otp.findUnique({
     where: {

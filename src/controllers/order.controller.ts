@@ -11,6 +11,7 @@ import {
 import { prisma } from "../utils/prismaclient.js";
 import axios from "axios";
 import FormData from "form-data";
+import { orderProcessed } from "../utils/whatsappclient.js";
 
 
 /** ✅ Create a new order */
@@ -63,11 +64,6 @@ const createOrder = async (req: Request, res: Response, next: NextFunction) => {
     include: { items: true },
   });
 
-  await prisma.productVariant.updateMany({
-    where: { id: { in: items.map((item) => item.productVariantId) } },
-    data: { stock: { decrement: 1 } },
-  });
-
   // Create order in Nimbus Post
   const addressData = await prisma.address.findUnique({
     where: { id: addressId },
@@ -76,16 +72,14 @@ const createOrder = async (req: Request, res: Response, next: NextFunction) => {
   if (!addressData) {
     throw new RouteError(HttpStatusCodes.NOT_FOUND, "Address not found");
   }
-
   const formData = new FormData();
 
   formData.append("order_number", order.id.toString());
   formData.append("payment_method", order.paid ? "prepaid" : "COD");
   formData.append("amount", order.total.toString());
   formData.append("fname", addressData.firstName);
-  formData.append("lname", addressData.lastName ?? "");
-  formData.append("address", addressData.aptNumber + " " + addressData.street);
-  formData.append("phone", addressData.phoneNumber);
+  formData.append("lname", addressData.lastName === "" ? "N/A" : (addressData.lastName ?? "N/A"));
+  formData.append("address", addressData.aptNumber + " " + addressData.street);  formData.append("phone", addressData.phoneNumber);
   formData.append("city", addressData.city);
   formData.append("state", addressData.state);
   formData.append("country", addressData.country);
@@ -98,21 +92,26 @@ const createOrder = async (req: Request, res: Response, next: NextFunction) => {
     formData.append(`products[${index}][sku]`, order.id.toString());
   });
 
-  const data = await axios.post(
-    "https://ship.nimbuspost.com/api/orders/create",
-    formData,
-    {
-      headers: {
-        ...formData.getHeaders(),
-        "NP-API-KEY": process.env.NIMBUS_TOKEN,
+  try {
+    const data = await axios.post(
+      "https://ship.nimbuspost.com/api/orders/create",
+      formData,
+      {
+        headers: {
+          ...formData.getHeaders(),
+          "NP-API-KEY": process.env.NIMBUS_TOKEN,
+          "Content-Type": "multipart/form-data",
+        }
       }
-    }
-  );
+    );
+    await prisma.order.update({
+      where: { id: order.id },
+      data: { NimbusPostOrderId: data.data.data }
+    })
+  } catch (error : any) {
+    throw new RouteError(HttpStatusCodes.BAD_REQUEST, "Failed to create Nimbus Post order");
+  }
 
-  await prisma.order.update({
-    where: { id: order.id },
-    data: { NimbusPostOrderId: data.data.data }
-  })
 
   if (isDiscount) {
     await prisma.discount.update({
@@ -123,15 +122,19 @@ const createOrder = async (req: Request, res: Response, next: NextFunction) => {
     })
   }
 
+  const result = await prisma.productVariant.updateMany({
+    where: { id: { in: items.map((item) => item.productVariantId) } },
+    data: { stock: { decrement: 1 } },
+  });
+
   // Send order to Whatsapp
-  // await orderProcessed(
-  //   req.user.name,
-  //   items[0].productName,
-  //   "ARVAN",
-  //   req.user.mobile_no,
-  // )
-  res.status(HttpStatusCodes.CREATED).json({ success: true, order });
-};
+  await orderProcessed(
+    req.user?.name,
+    items.map((item) => item.productName).join(", "),
+    "# " + order.orderId,
+    req.user?.mobile_no,
+  );
+  res.status(HttpStatusCodes.CREATED).json({ success: true, order });};
 /** ✅ Get all orders (Admin) */
 const getAllOrders = async (req: Request, res: Response, next: NextFunction) => {
   if (!req.user) {
