@@ -22,22 +22,26 @@ const createOrder = async (req: Request, res: Response, next: NextFunction) => {
     throw new ValidationErr(parsed.error.errors);
   }
   const { userId, items, total, addressId, paid, isDiscount, discount, discountCode, razorpayOrderId } = parsed.data;
-
-
   if (paid) {
     if (!razorpayOrderId) {
       throw new RouteError(HttpStatusCodes.BAD_REQUEST, "Razorpay Order ID is required");
     }
-    const response = await axios.get(`https://api.razorpay.com/v1/orders/${razorpayOrderId}`, {
-      auth: {
-        username: process.env.RAZORPAY_KEY_ID || '',
-        password: process.env.RAZORPAY_SECRET || ''
+    try {
+      const response = await axios.get(`https://api.razorpay.com/v1/orders/${razorpayOrderId}`, {
+        auth: {
+          username: process.env.RAZORPAY_KEY_ID || '',
+          password: process.env.RAZORPAY_SECRET || ''
+        }
+      });
+      if (response.data.status !== "authorized" && response.data.status !== "paid") {
+        throw new RouteError(HttpStatusCodes.BAD_REQUEST, "Order is not paid");
       }
-    });
-    if (response.data.status !== "paid") {
-      throw new RouteError(HttpStatusCodes.BAD_REQUEST, "Order is not paid");
-    }
-  } const order = await prisma.order.create({
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.status === 400) {
+        throw new RouteError(HttpStatusCodes.BAD_REQUEST, "Invalid Razorpay order ID");
+      }
+      throw error;
+    }  } const order = await prisma.order.create({
     data: {
       userId,
       total,
