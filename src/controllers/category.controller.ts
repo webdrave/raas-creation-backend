@@ -17,9 +17,17 @@ const addCategory = async (req: Request, res: Response, next: NextFunction) => {
     }
     const { name } = parsed.data;
 
+    const highestPriority = await prisma.category.findFirst({
+        orderBy: { priority: "desc" },
+        select: { priority: true },
+    });
+
+    const priority = highestPriority ? highestPriority.priority + 1 : 1;
+
     const category = await prisma.category.create({
         data: {
             name,
+            priority,
         },
     });
 
@@ -80,6 +88,7 @@ const getAllCategories = async (
                 select: { Product: true },
             },
         },
+        orderBy: { priority: "asc" },
     });
 
     // Optionally format the result to include productCount field explicitly
@@ -137,12 +146,48 @@ const getCategoryDetails = async (req: Request, res: Response, next: NextFunctio
                     }
                 }
             }
-        }
+        },
+        orderBy: { priority: "asc" },
     });
 
+    categories.filter((category) => category.Product.length > 0);
+    
     res.status(HttpStatusCodes.OK).json({ success: true, categories });
 };
 
+const updateCategoryPriority = async (req: Request, res: Response, next: NextFunction) => {
+    const { id, priority } = req.body;
+    if (!id) {
+        throw new RouteError(HttpStatusCodes.BAD_REQUEST, "Missing category id");
+    }
+    const category = await prisma.category.findUnique({ where: { id } });
+    if (!category) {
+        throw new RouteError(HttpStatusCodes.NOT_FOUND, "Category not found");
+    }
+
+    await prisma.category.updateMany({
+        where: {
+            priority: {
+                gte: parseInt(priority)
+            }
+        },
+        data: {
+            priority: {
+                increment: 1
+            }
+        }
+    });
+
+    const updatedCategory = await prisma.category.update({
+        where: { id },
+        data: {
+            priority: {
+                set: parseInt(priority)
+            }
+        }
+    });
+    res.status(HttpStatusCodes.OK).json({ success: true, category: updatedCategory });
+};    
 
 export default {
     addCategory,
@@ -151,4 +196,5 @@ export default {
     getAllCategories,
     getCategoryDetails,
     getCategory,
+    updateCategoryPriority,
 };

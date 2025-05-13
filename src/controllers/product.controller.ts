@@ -423,6 +423,7 @@ const updateProduct = async (
     assets,
     status,
     tags,
+    sku
   } = parsed.data;
 
   // First, delete existing assets if new ones are provided
@@ -460,6 +461,7 @@ const updateProduct = async (
       discountPrice,
       category_id,
       status,
+      sku,
       assets: assets
         ? {
             create: assets.map((asset: { url: string; type: AssetType }) => ({
