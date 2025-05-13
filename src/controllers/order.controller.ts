@@ -166,7 +166,8 @@ const getAllOrders = async (req: Request, res: Response, next: NextFunction) => 
   const orders = await prisma.order.findMany({
     where: whereClause,
     include: {
-      items: true // Include all OrderItem fields directly
+      items: true, // Include all OrderItem fields directly
+      user: true,
     },
     take: limit,
     skip: skip,

@@ -150,6 +150,8 @@ const getCategoryDetails = async (req: Request, res: Response, next: NextFunctio
         orderBy: { priority: "asc" },
     });
 
+    categories.filter((category) => category.Product.length > 0);
+    
     res.status(HttpStatusCodes.OK).json({ success: true, categories });
 };
 
