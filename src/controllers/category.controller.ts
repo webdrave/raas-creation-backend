@@ -164,30 +164,61 @@ const updateCategoryPriority = async (req: Request, res: Response, next: NextFun
     if (!category) {
         throw new RouteError(HttpStatusCodes.NOT_FOUND, "Category not found");
     }
-
-    await prisma.category.updateMany({
-        where: {
-            priority: {
-                gte: parseInt(priority)
-            }
-        },
-        data: {
-            priority: {
-                increment: 1
-            }
+    const currentPriority = category.priority;
+    const newPriority = parseInt(priority);
+    await prisma.$transaction(async (tx) => {
+        // Case 1: Moving UP (from higher to lower priority number)
+        if (currentPriority > newPriority) {
+            await tx.category.updateMany({
+                where: {
+                    AND: [
+                        { priority: { gte: newPriority } },
+                        { priority: { lt: currentPriority } }
+                    ]
+                },
+                data: {
+                    priority: {
+                        increment: 1
+                    }
+                }
+            });
+        } 
+        // Case 2: Moving DOWN (from lower to higher priority number)
+        else if (currentPriority < newPriority) {
+            await tx.category.updateMany({
+                where: {
+                    AND: [
+                        { priority: { gt: currentPriority } },
+                        { priority: { lte: newPriority } }
+                    ]
+                },
+                data: {
+                    priority: {
+                        decrement: 1
+                    }
+                }
+            });
         }
+        // Case 3: No priority change
+        else {
+            return;
+        }
+
+        await tx.category.update({
+            where: { id },
+            data: {
+                priority: newPriority
+            }
+        });
     });
 
-    const updatedCategory = await prisma.category.update({
-        where: { id },
-        data: {
-            priority: {
-                set: parseInt(priority)
-            }
-        }
+    // Get the updated category to return
+    const updatedCategory = await prisma.category.findUnique({
+        where: { id }
     });
+
     res.status(HttpStatusCodes.OK).json({ success: true, category: updatedCategory });
-};    
+};   
 
 export default {
     addCategory,
