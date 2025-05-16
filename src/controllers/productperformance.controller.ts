@@ -28,7 +28,7 @@ import data from "../common/env.js";
 //             revenue: product.sales.reduce((acc, sale) => acc + Number(sale.totalRevenue), 0),
 //             profit: Number((product.sales.reduce((acc, sale) => acc + Number(sale.totalRevenue), 0) * 0.2).toFixed(2)),
 //             date: product.sales.map((sale) => sale.date),
-            
+
 //         }));
 //         formattedProducts.sort((a, b) => b.revenue - a.revenue);
 
@@ -42,11 +42,74 @@ import data from "../common/env.js";
 // };
 
 const getPerformance = async (req: Request, res: Response, next: NextFunction) => {
+
+
+    const rawProducts = await prisma.orderItem.findMany({
+        include: {
+            product: {
+                include: {
+                    category: true,
+                },
+            }
+        },
+    });
+
+    const revenueByCategory = {};
+
+    for (const item of rawProducts) {
+        const category = item.product.category;
+        const categoryId = category.id; // or use category.name if more readable
+        const revenue = item.priceAtOrder * item.quantity;
+
+        if (!revenueByCategory[categoryId]) {
+            revenueByCategory[categoryId] = {
+                categoryName: category.name,
+                totalRevenue: 0,
+            };
+        }
+
+        revenueByCategory[categoryId].totalRevenue += revenue;
+    }
+
+    // Convert to array if needed
+    const revenueArray = Object.values(revenueByCategory);
+
+    console.log(revenueArray);
+
+
+
     res.status(HttpStatusCodes.OK).json({
         message: "Performance data retrieved successfully",
+        data: revenueByCategory,
     });
+};
+const getTopperformer = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+
+    // Since we can't multiply in prisma groupBy, let's do it with raw query:
+
+    const rawResult = await prisma.$queryRaw<
+      { productName: string; totalRevenue: number }[]
+    >`
+      SELECT 
+        "productName",
+        SUM("priceAtOrder" * quantity) as "totalRevenue"
+      FROM "OrderItem"
+      GROUP BY "productName"
+      ORDER BY "totalRevenue" DESC
+    `;
+
+    console.log(rawResult)
+    res.status(200).json({
+      message: "Top performers by product name",
+      data: rawResult,
+    });
+  } catch (error) {
+    next(error);
+  }
 };
 
 export default {
     getPerformance,
+    getTopperformer,
 };
