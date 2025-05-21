@@ -52,23 +52,26 @@ const getInventory = async (req: Request, res: Response, next: NextFunction) => 
             ? { name: { contains: search as string, mode: "insensitive" as const } }
             : {};
 
+        // Get product IDs first
+        const productQuery = await prisma.product.findMany({
+            where: { ...searchFilter, status: ProductStatus.PUBLISHED },
+            skip,
+            take: limitNum,
+            orderBy: { createdAt: 'desc' },
+            select: { id: true },
+        });
+        const productIds = productQuery.map(p => p.id);
+
         // Fetch paginated products and total count in parallel
         const [products, totalProducts, productStocks] = await Promise.all([
             prisma.product.findMany({
-                where: { ...searchFilter },
-                skip,
-                take: limitNum,
+                where: { id: { in: productIds } },
                 orderBy: { createdAt: 'desc' },
                 select: { id: true, name: true },
             }),
-            prisma.product.count({ where: { status: ProductStatus.PUBLISHED } }),
+            prisma.product.count({ where: { status: ProductStatus.PUBLISHED, ...searchFilter } }),
             prisma.productVariant.findMany({
-                where: { color: { productId: { in: (await prisma.product.findMany({
-                    where: { status: ProductStatus.PUBLISHED },
-                    skip,
-                    take: limitNum,
-                    select: { id: true }
-                })).map(p => p.id) } } },
+                where: { color: { productId: { in: productIds } } },
                 select: { stock: true, color: { select: { productId: true } } },
             }),
         ]);
