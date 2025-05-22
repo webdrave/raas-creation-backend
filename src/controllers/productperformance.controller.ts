@@ -71,11 +71,6 @@ const getPerformance = async (req: Request, res: Response, next: NextFunction) =
         revenueByCategory[categoryId].totalRevenue += revenue;
     }
 
-    // Convert to array if needed
-    const revenueArray = Object.values(revenueByCategory);
-
-    console.log(revenueArray);
-
 
 
     res.status(HttpStatusCodes.OK).json({
@@ -99,7 +94,6 @@ const getTopperformer = async (req: Request, res: Response, next: NextFunction) 
       ORDER BY "totalRevenue" DESC
     `;
 
-    console.log(rawResult)
     res.status(200).json({
       message: "Top performers by product name",
       data: rawResult,
