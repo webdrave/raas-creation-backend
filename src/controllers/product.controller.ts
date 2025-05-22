@@ -609,7 +609,10 @@ const getOverview = async (req: Request, res: Response, next: NextFunction) => {
 const getColors = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const colors = await prisma.productColor.findMany({
-      distinct: ["colorHex"],
+      distinct: ["color"],
+      orderBy: {
+        color: 'asc'
+      }
     });
     res.status(200).json(colors);
   } catch (error) {
