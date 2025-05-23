@@ -151,8 +151,18 @@ const getCategoryDetails = async (req: Request, res: Response, next: NextFunctio
     });
 
     categories.filter((category) => category.Product.length > 0);
+
+    const newCategory = categories.map((category) => {
+        return {
+            id: category.id,
+            name: category.name,
+            priority: category.priority,
+            productCount: category.Product.length,
+            image: category.Product[0].assets[0].asset_url,
+        }
+    })
     
-    res.status(HttpStatusCodes.OK).json({ success: true, categories });
+    res.status(HttpStatusCodes.OK).json({ success: true, categories:newCategory });
 };
 
 const updateCategoryPriority = async (req: Request, res: Response, next: NextFunction) => {
