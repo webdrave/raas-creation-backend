@@ -33,6 +33,8 @@ router.post("/change-password", authenticateJWT, isAdmin, customersController.ch
 
 router.post("/reset-password", customersController.forgotPassword);
 
+router.get("/byId/:id", authenticateJWT, customersController.getCustomerById);
+
 router.get("/", authenticateJWT, customersController.getCustomer);
 
 router.put("/", authenticateJWT, customersController.updatecustomer);

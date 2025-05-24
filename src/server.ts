@@ -1,6 +1,5 @@
 import morgan from 'morgan';
 
-import helmet from 'helmet';
 import express, { Request, Response, NextFunction } from 'express';
 
 
@@ -11,7 +10,6 @@ import { authenticateJWT, globalErrorHandler } from './middleware/globalerrorhan
 
 import ENV from './common/env.js';
 import HttpStatusCodes from './common/httpstatuscode.js';
-import { RouteError } from './common/routeerror.js';
 import { NodeEnvs } from './common/constants.js';
 import cors from 'cors';
 import cookieParser from 'cookie-parser'
@@ -116,6 +114,7 @@ app.use("/api/productperformance", productPerformanceRouter);
 app.use("/api/discounts", authenticateJWT, discountRouter);
 
 app.use("/api/wishlists", wishlistRoutes);
+
 
 // Add error handler
 

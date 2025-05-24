@@ -51,6 +51,7 @@ const createOrder = async (req: Request, res: Response, next: NextFunction) => {
       fulfillment: OrderFulfillment.PENDING,
       IsDiscount: isDiscount ? true : false,
       discount: discount ?? 0,
+      razorpayOrderId: razorpayOrderId,
       discountCode: discountCode ?? "",
       items: {
         create: items.map((item) => ({
@@ -155,12 +156,16 @@ const getAllOrders = async (req: Request, res: Response, next: NextFunction) => 
 
   // Add search functionality if search term is provided
   if (search) {
-    whereClause.OR = [
-      { id: { contains: search, mode: 'insensitive' } },
-      { userId: { contains: search, mode: 'insensitive' } },
-      { orderId: { contains: search, mode: 'insensitive' } },
-    ];
-  }
+  const searchNumber = Number(search);
+
+  whereClause.OR = [
+    { id: { contains: search, mode: 'insensitive' } },
+    { userId: { contains: search, mode: 'insensitive' } },
+    // Only add orderId filter if search is a valid number
+    ...(Number.isNaN(searchNumber) ? [] : [{ orderId: searchNumber }])
+  ];
+}
+
 
   // Get orders with pagination
   const orders = await prisma.order.findMany({
@@ -168,6 +173,7 @@ const getAllOrders = async (req: Request, res: Response, next: NextFunction) => 
     include: {
       items: true, // Include all OrderItem fields directly
       user: true,
+      address: true,
     },
     take: limit,
     skip: skip,
