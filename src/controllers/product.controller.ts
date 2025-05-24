@@ -568,21 +568,27 @@ const getOverview = async (req: Request, res: Response, next: NextFunction) => {
     const oneMonthAgo = new Date();
     oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
 
-    const [totalProducts, totalRevenue, lastMonthRevenue, totalUsers] =
+    const [totalProducts, totalRevenue, lastMonthRevenue, totalUsers,pendingRevenue] =
       await Promise.all([
         prisma.product.count({ where: { status: "PUBLISHED" } }),
         prisma.order.aggregate({
           _sum: { total: true },
-          where: { status: "COMPLETED" },
+          where: { paid: true },
         }),
         prisma.order.aggregate({
           _sum: { total: true },
           where: {
             createdAt: { gte: oneMonthAgo },
-            status: "COMPLETED",
+            paid: true,
           },
         }),
         prisma.user.count(),
+        prisma.order.aggregate({
+          _sum: { total: true },
+          where: {
+            paid: false,
+          },
+        })
       ]);
 
     const totalRevenueValue = totalRevenue._sum.total || 0;
@@ -599,6 +605,7 @@ const getOverview = async (req: Request, res: Response, next: NextFunction) => {
       revenue: totalRevenueValue,
       growth: growthPercentage,
       usersCount: totalUsers,
+      pendingRevenue: pendingRevenue._sum.total || 0
     });
   } catch (error) {
     console.error(error);

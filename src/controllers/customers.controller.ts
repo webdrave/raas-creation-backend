@@ -30,60 +30,96 @@ const allCustomers = async (
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
     const search = (req.query.search as string) || '';
+    const isEmailVerified = req.query.isEmailVerified === 'true' ? true : req.query.isEmailVerified === 'false' ? false : undefined;
+    const isPhoneNoVerified = req.query.isPhoneNoVerified === 'true' ? true : req.query.isPhoneNoVerified === 'false' ? false : undefined;
+    const hasOrders = req.query.hasOrders === 'true' ? true : req.query.hasOrders === 'false' ? false : undefined;
+    const createdFrom = req.query.createdFrom ? new Date(req.query.createdFrom as string) : undefined;
+    const createdTo = req.query.createdTo ? new Date(req.query.createdTo as string) : undefined;
 
     const skip = (page - 1) * limit;
 
-    const totalCount = await prisma.user.count({
-      where: {
-        OR: [
-          { name: { contains: search, mode: 'insensitive' } },
-          { mobile_no: { contains: search, mode: 'insensitive' } }
-        ]
-      }
-    });
+    const whereClause: any = {
+      role: 'USER',
+      AND: [
+        ...(search
+          ? [
+              {
+                OR: [
+                  { name: { contains: search, mode: 'insensitive' } },
+                  { mobile_no: { contains: search, mode: 'insensitive' } },
+                  { email: { contains: search, mode: 'insensitive' } }
+                ]
+              }
+            ]
+          : []),
+        ...(isEmailVerified !== undefined ? [{ isEmailVerified }] : []),
+        ...(isPhoneNoVerified !== undefined ? [{ isPhoneNoVerified }] : []),
+        ...(createdFrom ? [{ createdAt: { gte: createdFrom } }] : []),
+        ...(createdTo ? [{ createdAt: { lte: createdTo } }] : [])
+      ]
+    };
 
-    const totalPages = Math.ceil(totalCount / limit);
+    if (hasOrders !== undefined) {
+      whereClause.AND.push({
+        Order: hasOrders ? { some: {} } : { none: {} }
+      });
+    }
+
+    const totalCount = await prisma.user.count({ where: whereClause });
 
     const customers = await prisma.user.findMany({
-      where: {
-        OR: [
-          { name: { contains: search, mode: 'insensitive' } },
-          { mobile_no: { contains: search, mode: 'insensitive' } }
-        ]
+      where: whereClause,
+      orderBy: {
+        createdAt: 'desc'
       },
       select: {
         id: true,
         name: true,
         mobile_no: true,
+        email: true,
+        image: true,
+        createdAt: true,
+        isEmailVerified: true,
+        isPhoneNoVerified: true,
+        Wishlist: {
+          select: { id: true }
+        },
         Order: {
           select: {
-            id: true,
             total: true,
-            createdAt: true,
+            createdAt: true
           },
           orderBy: {
-            createdAt: "desc",
-          },
+            createdAt: 'desc'
+          }
         }
       },
       skip,
       take: limit
     });
 
-    const formattedCustomers = customers.map((customer: { Order: any[]; id: any; name: any; mobile_no: any; }) => {
+    const formattedCustomers = customers.map(customer => {
       const totalOrders = customer.Order.length;
       const totalSpent = customer.Order.reduce((sum, order) => sum + order.total, 0);
       const lastOrder = customer.Order[0]?.createdAt || null;
+      const wishlistCount = customer.Wishlist.length;
 
       return {
         id: customer.id,
-        name: customer.name || "N/A",
+        name: customer.name || 'N/A',
         mobile_no: customer.mobile_no,
+        email: customer.email || 'N/A',
+        createdAt: customer.createdAt,
+        isEmailVerified: customer.isEmailVerified,
+        isPhoneNoVerified: customer.isPhoneNoVerified,
         totalOrders,
         totalSpent,
         lastOrder,
+        wishlistCount
       };
     });
+
+    const totalPages = Math.ceil(totalCount / limit);
 
     res.json({
       success: true,
@@ -100,6 +136,82 @@ const allCustomers = async (
     throw new RouteError(HttpStatusCodes.INTERNAL_SERVER_ERROR, "Failed to fetch customers");
   }
 };
+
+const getCustomerById = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { id } = req.params;
+
+    const customer = await prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        name: true,
+        mobile_no: true,
+        email: true,
+        image: true,
+        createdAt: true,
+        updatedAt: true,
+        isEmailVerified: true,
+        emailVerified: true,
+        isPhoneNoVerified: true,
+        phoneNoVerified: true,
+        Address: true,
+        Wishlist: {
+          select: {
+            product: {
+              select: {
+                id: true,
+                name: true,
+                price: true,
+                discountPrice: true,
+                assets: {
+                  take: 1,
+                  select: { asset_url: true }
+                }
+              }
+            }
+          }
+        },
+        Order: {
+          select: {
+            id: true,
+            total: true,
+            status: true,
+            createdAt: true,
+            items: {
+              select: {
+                productName: true,
+                priceAtOrder: true,
+                quantity: true,
+                size: true,
+                color: true,
+                productImage: true,
+              }
+            }
+          },
+          orderBy: {
+            createdAt: 'desc'
+          }
+        }
+      }
+    });
+
+    if (!customer) {
+      res.status(404).json({ success: false, message: 'Customer not found' });
+      return;
+    }
+
+    res.json({ success: true, data: customer });
+  } catch (error) {
+    console.error("Error fetching customer:", error);
+    throw new RouteError(HttpStatusCodes.INTERNAL_SERVER_ERROR, "Failed to fetch customer details");
+  }
+};
+
 
 const changePassword = async (req: Request, res: Response, next: NextFunction) => {
   const { customerId, newPassword } = req.body;
@@ -548,4 +660,5 @@ export default {
   makeAdmin,
   getCustomer,
   changePassword,
+  getCustomerById
 };

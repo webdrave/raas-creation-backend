@@ -24,7 +24,9 @@ const getAllTimeMetrics = async (
 
     const lastMonthRevenue = await prisma.order.aggregate({
       _sum: { total: true },
-      where: { createdAt: { gte: oneMonthAgo } },
+      where: { 
+        paid: true,
+        createdAt: { gte: oneMonthAgo } },
     });
 
     const salesGrowth =
@@ -59,14 +61,14 @@ const getSalesOverview = async (req: Request, res: Response, next: NextFunction)
       // send the all time
       const totalRevenue = await prisma.order.aggregate({
         _sum: { total: true },
-        where: { status: "COMPLETED" }
+        where: { paid: true }
       });
       const totalOrders = await prisma.order.count();
       const newCustomers = await prisma.user.count();
 
       const totalRevenue2 = await prisma.order.aggregate({
         _sum: { total: true },
-        where: { status: "COMPLETED", createdAt: { gte: new Date(new Date().setDate(new Date().getDate() - daysToSubtract)) } }
+        where: { paid: true, createdAt: { gte: new Date(new Date().setDate(new Date().getDate() - daysToSubtract)) } }
       });
       // Calculate sales growth: compare last month to the total
       const oneMonthAgo = new Date();
@@ -74,7 +76,7 @@ const getSalesOverview = async (req: Request, res: Response, next: NextFunction)
 
       const lastMonthRevenue = await prisma.order.aggregate({
         _sum: { total: true },
-        where: { createdAt: { gte: oneMonthAgo } },
+        where: { paid: true, createdAt: { gte: oneMonthAgo } },
       });
 
       const salesGrowth = lastMonthRevenue._sum.total && totalRevenue2._sum.total ? (lastMonthRevenue._sum.total / totalRevenue2._sum.total) * 100 : 0;
@@ -94,11 +96,11 @@ const getSalesOverview = async (req: Request, res: Response, next: NextFunction)
 
     const totalRevenue = await prisma.order.aggregate({
       _sum: { total: true },
-      where: { status: "COMPLETED", createdAt: { gte: new Date(new Date().setDate(new Date().getDate() - daysToSubtract)) } }
+      where: { paid: true, createdAt: { gte: new Date(new Date().setDate(new Date().getDate() - daysToSubtract)) } }
     });
 
     const totalOrders = await prisma.order.count({
-      where: { createdAt: { gte: new Date(new Date().setDate(new Date().getDate() - daysToSubtract)) } }
+      where: { paid: true, createdAt: { gte: new Date(new Date().setDate(new Date().getDate() - daysToSubtract)) } }
     });
 
     const newCustomers = await prisma.user.count({
@@ -108,7 +110,7 @@ const getSalesOverview = async (req: Request, res: Response, next: NextFunction)
     // Calculate sales growth: compare last month to the total
     const totalRevenue2 = await prisma.order.aggregate({
       _sum: { total: true },
-      where: { status: "COMPLETED", createdAt: { gte: new Date(new Date().setDate(new Date().getDate() - 30)) } }
+      where: { paid: true, createdAt: { gte: new Date(new Date().setDate(new Date().getDate() - 30)) } }
     });
     // Calculate sales growth: compare last month to the total
     const oneMonthAgo = new Date();
@@ -116,7 +118,7 @@ const getSalesOverview = async (req: Request, res: Response, next: NextFunction)
 
     const lastMonthRevenue = await prisma.order.aggregate({
       _sum: { total: true },
-      where: { createdAt: { gte: oneMonthAgo } },
+      where: { paid:true, createdAt: { gte: oneMonthAgo } },
     });
 
     const salesGrowth = lastMonthRevenue._sum.total && totalRevenue2._sum.total ? (lastMonthRevenue._sum.total / totalRevenue2._sum.total) * 100 : 0;
@@ -156,7 +158,7 @@ const getGraphData = async (req: Request, res: Response, next: NextFunction) => 
 
     const orders = await prisma.order.findMany({
       where: {
-        status: "COMPLETED",
+        paid: true,
       },
     })
 
@@ -193,8 +195,6 @@ const getGraphData = async (req: Request, res: Response, next: NextFunction) => 
         dayjs(a.name).valueOf() - dayjs(b.name).valueOf()
       )
     }
-
-    console.log(salesData)
 
     res.status(HttpStatusCodes.OK).json(salesData)
   } catch (err) {

@@ -13,8 +13,8 @@ const getTopProducts = async (req: Request, res: Response, next: NextFunction) =
     },
   });
 
-  // Sort manually (since Prisma does not allow ordering by _sum)
-  topProducts.sort((a, b) => (b._sum.quantity || 0) - (a._sum.quantity || 0));
+  // Sort manually based on revenue (since Prisma does not allow ordering by _sum)
+  topProducts.sort((a, b) => (b._sum.priceAtOrder || 0) - (a._sum.priceAtOrder || 0));
 
   // Limit results after sorting
   const limitedProducts = topProducts.slice(0, limit);
@@ -36,7 +36,6 @@ const getTopProducts = async (req: Request, res: Response, next: NextFunction) =
 
   res.status(HttpStatusCodes.OK).json({ success: true, products });
 };
-
 
 const getBesSellers = async (
   req: Request,
